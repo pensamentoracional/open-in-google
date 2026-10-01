@@ -56,3 +56,7 @@ Branch feature/windows-integration deriva da fase 4. Novo projeto WinForms net10
 ## Etapa 6
 
 Branch feature/installable-pilot deriva da fase 5. `--setup`, `--recovery`, `--register` e `--unregister` são entradas explícitas do executável. A manutenção usa o lock de registro e não lê bancos/OAuth. `installer/SheetsWindows.iss` empacota a publicação self-contained com Inno Setup 6; o CI Windows compila e valida o ciclo completo em um perfil descartável com `installer/Test-Lifecycle.ps1`. Não executar esse teste contra uma instalação pessoal. Guia de uso: STAGE_6.md.
+
+## Etapa 7
+
+Branch feature/formats-environments deriva da fase 6. ExcelDataReader 3.9.0 fixado, licença em third-party. `--copy` permite origem de rede/nuvem hidratada sem escrita nela. CI acrescenta comparação de formatos e teste SMB de leitura apenas em perfil Windows descartável. A retirada dos novos formatos exige IConversionVerifier; sem ela o coordinator falha fechado. Instruções e gates: STAGE_7.md.

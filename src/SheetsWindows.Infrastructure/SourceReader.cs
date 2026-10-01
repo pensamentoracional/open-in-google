@@ -7,26 +7,21 @@ using SheetsWindows.Core;
 
 namespace SheetsWindows.Infrastructure;
 
-public sealed class SourceReader : ISourceReader
+public sealed class SourceReader(bool copyEnvironments = false) : ISourceReader
 {
     public ISourceLease Open(string path)
     {
         var full = Path.GetFullPath(path);
-        if (!string.Equals(Path.GetExtension(full), ".xlsx", StringComparison.OrdinalIgnoreCase))
-            throw new NotSupportedException("Stage 2 accepts XLSX sources only.");
-        // Reject redirects: policy for OneDrive/reparse points/network sources comes later.
-        for (var current = full; current is not null; current = Path.GetDirectoryName(current))
-            if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
-                throw new NotSupportedException("Reparse-point sources are not supported in this stage.");
-        if (OperatingSystem.IsWindows() && new Uri(full).IsUnc)
-            throw new NotSupportedException("Network sources are not supported in this stage.");
+        var format = SpreadsheetFormats.Format(full);
+        SourceEnvironment.ValidateRead(full, copyEnvironments);
         var stream = new FileStream(full, FileMode.Open, FileAccess.Read, FileShare.Read,
             81920, FileOptions.Asynchronous | FileOptions.SequentialScan);
         try
         {
             var key = OperatingSystem.IsWindows() ? WindowsKey(stream.SafeFileHandle) :
                 "path:" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(full)));
-            return new Lease(stream, new SourceDescriptor(key, full, "xlsx"));
+            if (SourceEnvironment.IsNetwork(full) && key.Split(':')[2] == "0000000000000000") throw new NotSupportedException("Network server does not expose stable file identity.");
+            return new Lease(stream, new SourceDescriptor(SourceEnvironment.ScopeIdentity(full, key), full, format));
         }
         catch { stream.Dispose(); throw; }
     }

@@ -58,7 +58,32 @@ public sealed class GoogleDriveClient(HttpClient http, IGoogleAuth auth)
         } while (page is not null);
         return files;
     }
-    public async Task<string> CreateAsync(RemoteAttempt attempt, string name, string? folder, byte[]? bytes, CancellationToken ct)
+    public async Task<byte[]> ExportXlsxAsync(string account, string id, CancellationToken ct)
+    {
+        ValidateId(id);
+        for (var retry = 0; retry < 2; retry++)
+        {
+            var access = await auth.AccessAsync(retry == 1, ct);
+            if (access.AccountId != account) throw new InvalidOperationException("Google account changed.");
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"https://www.googleapis.com/drive/v3/files/{id}/export?mimeType={Uri.EscapeDataString(SpreadsheetFormats.XlsxMime)}");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", access.Token);
+            using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+            if (retry == 0 && response.StatusCode == HttpStatusCode.Unauthorized) continue;
+            if (!response.IsSuccessStatusCode) throw new GoogleApiException((int)response.StatusCode);
+            const int max = 10 * 1024 * 1024;
+            if (response.Content.Headers.ContentLength > max) throw new InvalidDataException("Export too large.");
+            await using var stream = await response.Content.ReadAsStreamAsync(ct); using var buffer = new MemoryStream();
+            var chunk = new byte[81920]; int count;
+            while ((count = await stream.ReadAsync(chunk, ct)) != 0)
+            {
+                if (buffer.Length + count > max) throw new InvalidDataException("Export too large.");
+                await buffer.WriteAsync(chunk.AsMemory(0, count), ct);
+            }
+            return buffer.ToArray();
+        }
+        throw new AuthorizationRequiredException();
+    }
+    public async Task<string> CreateAsync(RemoteAttempt attempt, string name, string? folder, byte[]? bytes, CancellationToken ct, string mediaType = SpreadsheetFormats.XlsxMime)
     {
         var meta = new Dictionary<string, object>
         {
@@ -75,7 +100,7 @@ public sealed class GoogleDriveClient(HttpClient http, IGoogleAuth auth)
             else
             {
                 var content = new MultipartContent("related"); content.Add(new StringContent(metadata, Encoding.UTF8, "application/json"));
-                var media = new ByteArrayContent(bytes); media.Headers.ContentType = new MediaTypeHeaderValue("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"); content.Add(media); req.Content = content;
+                var media = new ByteArrayContent(bytes); media.Headers.ContentType = new MediaTypeHeaderValue(mediaType); content.Add(media); req.Content = content;
             }
             return req;
         }, attempt.AccountId, ct);

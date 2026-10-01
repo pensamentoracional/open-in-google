@@ -17,10 +17,10 @@ public sealed record LocalStorage(string Root)
         return new LocalStorage(Path.Combine(local, "SheetsWindows"));
     }
 
-    public LocalPreparation CreatePreparation()
+    public LocalPreparation CreatePreparation(ISourceReader? sourceReader = null)
     {
         PrivateDirectory.Create(Root);
-        return new LocalPreparation(new SqliteOperationRegistry(DatabasePath), new SourceReader(),
+        return new LocalPreparation(new SqliteOperationRegistry(DatabasePath), sourceReader ?? new SourceReader(),
             new FileOperationLock(LocksPath), new BackupStore(BackupsPath));
     }
 }

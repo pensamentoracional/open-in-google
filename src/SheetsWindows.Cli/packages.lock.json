@@ -2,6 +2,11 @@
   "version": 1,
   "dependencies": {
     "net10.0": {
+      "ExcelDataReader": {
+        "type": "Transitive",
+        "resolved": "3.9.0",
+        "contentHash": "3lEkUzG67UWPYj/xlX5Hua3MeQQktnK0B7WGzDjLpdJpBtct7szX0E4WB3Kl6C/8bNnbkyT2eO0FSPV+9CCemw=="
+      },
       "Microsoft.Data.Sqlite": {
         "type": "Transitive",
         "resolved": "10.0.12",
@@ -58,6 +63,7 @@
       "sheetswindows.infrastructure": {
         "type": "Project",
         "dependencies": {
+          "ExcelDataReader": "[3.9.0, )",
           "Microsoft.Data.Sqlite": "[10.0.12, )",
           "SheetsWindows.Core": "[1.0.0, )",
           "System.Security.Cryptography.ProtectedData": "[10.0.12, )"

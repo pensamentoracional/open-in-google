@@ -16,3 +16,11 @@ public sealed class UnixFactAttribute : FactAttribute
         if (OperatingSystem.IsWindows()) Skip = "Requires Unix permission bits.";
     }
 }
+
+public sealed class WindowsCiFactAttribute : FactAttribute
+{
+    public WindowsCiFactAttribute()
+    {
+        if (!OperatingSystem.IsWindows() || Environment.GetEnvironmentVariable("GITHUB_ACTIONS") != "true") Skip = "Requires disposable Windows CI profile with SMB share administration.";
+    }
+}

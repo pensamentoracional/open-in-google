@@ -10,7 +10,7 @@ internal static class Program
         try
         {
             var request = LauncherRequest.Parse(args);
-            if (request.Action == LauncherAction.Version) { Console.WriteLine("Sheets Windows pilot 0.6"); return 0; }
+            if (request.Action == LauncherAction.Version) { Console.WriteLine("Sheets Windows pilot 0.7"); return 0; }
             if (request.Action is LauncherAction.Register or LauncherAction.Unregister)
             {
                 var held = new FileOperationLock(LocalStorage.ForCurrentUser().LocksPath).AcquireAsync("windows-registration").AsTask().GetAwaiter().GetResult();
@@ -31,7 +31,7 @@ internal static class Program
         catch (Exception ex) when (LauncherErrors.Expected(ex))
         {
             if (args.Length == 1 && args[0] is "--register" or "--unregister") { Console.Error.WriteLine("Association maintenance failed; existing state preserved."); return 1; }
-            MessageBox.Show("Use o Sheets Windows para abrir um arquivo XLSX local. " + LauncherErrors.Message(ex), "Sheets Windows", MessageBoxButtons.OK, MessageBoxIcon.Warning); return 1;
+            MessageBox.Show("Use o Sheets Windows para abrir uma planilha suportada. " + LauncherErrors.Message(ex), "Sheets Windows", MessageBoxButtons.OK, MessageBoxIcon.Warning); return 1;
         }
     }
 }

@@ -30,7 +30,7 @@ public static class WindowsAssociationPlan
     public static IReadOnlyList<Value> Values(string exe)
     {
         var command = Command(exe); var full = Path.GetFullPath(exe);
-        return [
+        List<Value> values = [
             new(AppRoot, "SW_Owner", Owner, AssociationValueKind.String), new(AppRoot, "SW_Executable", full, AssociationValueKind.String),
             new(ProgRoot, "SW_Owner", Owner, AssociationValueKind.String), new(ProgRoot, "SW_Executable", full, AssociationValueKind.String),
             new(ExecutableRoot, "SW_Owner", Owner, AssociationValueKind.String), new(ExecutableRoot, "SW_Executable", full, AssociationValueKind.String),
@@ -47,6 +47,13 @@ public static class WindowsAssociationPlan
             new(OpenWith, ProgId, Array.Empty<byte>(), AssociationValueKind.None),
             new(RegisteredApps, AppName, CapabilityPath, AssociationValueKind.String)
         ];
+        foreach (var extension in SpreadsheetFormats.Extensions.Where(e => e != ".xlsx"))
+        {
+            values.Add(new(CapabilityPath + @"\FileAssociations", extension, ProgId, AssociationValueKind.String));
+            values.Add(new(ExecutableRoot + @"\SupportedTypes", extension, "", AssociationValueKind.String));
+            values.Add(new(@"Software\Classes\" + extension + @"\OpenWithProgids", ProgId, Array.Empty<byte>(), AssociationValueKind.None));
+        }
+        return values;
     }
 }
 

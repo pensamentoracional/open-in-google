@@ -5,7 +5,7 @@ using SheetsWindows.Core;
 
 namespace SheetsWindows.Infrastructure;
 
-public enum LauncherAction { Home, Open, Login, Defaults, Version, Setup, Recovery, Register, Unregister }
+public enum LauncherAction { Home, Open, Login, Defaults, Version, Setup, Recovery, Register, Unregister, Copy }
 public sealed record LauncherRequest(LauncherAction Action, string? Path = null)
 {
     public static LauncherRequest Parse(string[] args)
@@ -19,10 +19,10 @@ public sealed record LauncherRequest(LauncherAction Action, string? Path = null)
         if (args.Length == 1 && args[0] == "--login") return new(LauncherAction.Login);
         if (args.Length == 1 && args[0] == "--defaults") return new(LauncherAction.Defaults);
         var path = args.Length == 1 && !args[0].StartsWith("--", StringComparison.Ordinal) ? args[0] :
-            args.Length == 2 && args[0] == "--open" ? args[1] : throw new ArgumentException("One XLSX path required.");
+            args.Length == 2 && args[0] is "--open" or "--copy" ? args[1] : throw new ArgumentException("One spreadsheet path required.");
         if (!System.IO.Path.IsPathFullyQualified(path) || path.Any(char.IsControl) || path.Contains('"')
-            || !string.Equals(System.IO.Path.GetExtension(path), ".xlsx", StringComparison.OrdinalIgnoreCase)) throw new ArgumentException("Absolute XLSX path required.");
-        return new(LauncherAction.Open, System.IO.Path.GetFullPath(path));
+            || !SpreadsheetFormats.Extensions.Contains(System.IO.Path.GetExtension(path).ToLowerInvariant())) throw new ArgumentException("Absolute supported spreadsheet path required.");
+        return new(args.Length == 2 && args[0] == "--copy" ? LauncherAction.Copy : LauncherAction.Open, System.IO.Path.GetFullPath(path));
     }
 }
 public sealed class LauncherNotConfiguredException() : InvalidOperationException("Launcher setup required.");
@@ -60,12 +60,14 @@ public static class LauncherErrors
 {
     public static bool Expected(Exception ex) => ex is IOException or InvalidDataException or UnauthorizedAccessException or InvalidOperationException
         or NotSupportedException or ArgumentException or Win32Exception or HttpRequestException or OperationCanceledException
-        or Microsoft.Data.Sqlite.SqliteException or System.Text.Json.JsonException or System.Xml.XmlException or KeyNotFoundException or SecurityException;
+        or Microsoft.Data.Sqlite.SqliteException or System.Text.Json.JsonException or System.Xml.XmlException or KeyNotFoundException or SecurityException or ExcelDataReader.Exceptions.ExcelReaderException;
     public static string Message(Exception ex) => ex switch
     {
         LauncherNotConfiguredException => "Conclua a configuração do piloto antes de abrir planilhas. Abra o Sheets Windows e clique em Configurar piloto.",
         AuthorizationRequiredException => "O Google precisa de autorização. Abra o Sheets Windows e clique em Autorizar Google; depois abra a planilha novamente.",
         ReconciliationRequiredException => "A importação aguarda reconciliação. Não repita o upload manualmente. Consulte o guia de recuperação.",
+        ConversionMismatchException => "A conferência encontrou diferença nos dados convertidos. O original e o backup foram preservados. Não houve nova importação nem atualização remota.",
+        CopyRequiredException => "Esta planilha requer importação de cópia; o original deve ser preservado.",
         LocalConflictException => "O arquivo ou sua associação mudou. A substituição foi interrompida para conservar as versões existentes.",
         OperationCanceledException => "Operação interrompida. O backup e o registro de recuperação, quando criados, foram conservados.",
         _ => "Não foi possível concluir. Confira a configuração, a conexão e se o arquivo está aberto em outro aplicativo. Backups já criados permanecem disponíveis."
@@ -83,23 +85,52 @@ public sealed class WindowsLauncher(LocalStorage storage, HttpClient http, IBrow
     }
     public async Task<string> OpenAsync(string path, IProgress<string>? progress = null, CancellationToken ct = default)
     {
-        // Explorer activation is always replacement, never the diagnostic import command.
+        // Local replacement is limited to the configured unsynced root.
         var request = LauncherRequest.Parse(["--open", path]);
         var client = await LauncherConfiguration.LoadClientAsync(storage, ct);
         var policy = System.IO.Path.Combine(storage.Root, "replacement-root.txt");
         if (!File.Exists(policy)) throw new LauncherNotConfiguredException();
+        if (SpreadsheetFormats.Format(path) == "xls") return await CopyAsync(path, progress, ct);
         var root = await File.ReadAllTextAsync(policy, ct); var sources = new WindowsRetirementReader(root);
         await using (var eligibility = sources.Open(request.Path!)) { }
         progress?.Report("Conferindo arquivo e backup…");
+        var textOptions = SpreadsheetFormats.Format(path) == "xlsx" ? null : ExtendedConfiguration.Load(storage);
         var preparation = storage.CreatePreparation(); var local = new SqliteOperationRegistry(storage.DatabasePath);
         var remote = new GoogleRemoteRegistry(System.IO.Path.Combine(storage.Root, "google.db")); var locks = new FileOperationLock(storage.LocksPath);
         var auth = Auth(client, locks);
-        var importer = new GoogleImport(preparation, local, remote, new SourceReader(), locks, auth, new GoogleDriveClient(http, auth));
+        var importer = new GoogleImport(preparation, local, remote, new SourceReader(), locks, auth, new GoogleDriveClient(http, auth), textOptions);
         progress?.Report("Abrindo sua planilha no Google Sheets…");
         var receipt = await importer.ImportReceiptAsync(request.Path!, ct);
+        if (!receipt.CanReplace) return await PublishCopyAsync(receipt, progress, ct);
         progress?.Report("Concluindo substituição. Operação: " + receipt.Operation.Id);
         var coordinator = new ReplacementCoordinator(local, remote, new BackupStore(storage.BackupsPath), locks,
-            new ReplacementJournal(System.IO.Path.Combine(storage.Root, "replacement.db")), sources, browser);
+            new ReplacementJournal(System.IO.Path.Combine(storage.Root, "replacement.db")), sources, browser, new ConversionVerifier(new GoogleDriveClient(http, auth), textOptions));
         return await coordinator.ReplaceAsync(receipt, ct);
     }
+    public async Task<string> CopyAsync(string path, IProgress<string>? progress = null, CancellationToken ct = default)
+    {
+        _ = LauncherRequest.Parse(["--copy", path]);
+        var client = await LauncherConfiguration.LoadClientAsync(storage, ct);
+        var options = SpreadsheetFormats.Format(path) == "xlsx" ? null : ExtendedConfiguration.Load(storage);
+        var sources = new SourceReader(copyEnvironments: true);
+        // Preflight is read-only, does not hydrate online-only placeholders and precedes OAuth/network.
+        await using (var preflight = sources.Open(path)) { }
+        var locks = new FileOperationLock(storage.LocksPath); var auth = Auth(client, locks);
+        var importer = new GoogleImport(storage.CreatePreparation(sources), new SqliteOperationRegistry(storage.DatabasePath),
+            new GoogleRemoteRegistry(Path.Combine(storage.Root, "google.db")), sources, locks, auth, new GoogleDriveClient(http, auth), options);
+        progress?.Report("Importando cópia; o original será conservado…");
+        return await PublishCopyAsync(await importer.ImportReceiptAsync(path, ct), progress, ct);
+    }
+    private async Task<string> PublishCopyAsync(ImportReceipt receipt, IProgress<string>? progress, CancellationToken ct)
+    {
+        await using var held = await new FileOperationLock(storage.LocksPath).AcquireAsync(receipt.Operation.SourceKey, ct);
+        var folder = Path.Combine(storage.Root, "shortcuts"); PrivateDirectory.Create(folder);
+        var shortcut = Path.Combine(folder, receipt.Operation.Id.ToString("N") + ".url"); var bytes = InternetShortcut.Bytes(receipt.Url);
+        if (!File.Exists(shortcut)) InternetShortcut.Publish(shortcut, bytes);
+        using var checkedShortcut = InternetShortcut.Hold(shortcut, bytes);
+        ct.ThrowIfCancellationRequested(); browser.Open(receipt.Url);
+        progress?.Report("Cópia aberta no Sheets. Original preservado; atalho disponível na pasta de atalhos do aplicativo.");
+        return shortcut;
+    }
+
 }

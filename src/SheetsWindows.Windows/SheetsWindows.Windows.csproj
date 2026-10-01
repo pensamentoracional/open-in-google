@@ -9,4 +9,4 @@
   </PropertyGroup>
   <ItemGroup><None Include="../../LICENSE" Link="LICENSE" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"/></ItemGroup>
   <ItemGroup><ProjectReference Include="../SheetsWindows.Infrastructure/SheetsWindows.Infrastructure.csproj"/></ItemGroup>
-</Project>
+<ItemGroup><None Include="../../third-party/ExcelDataReader-LICENSE.txt" Link="third-party/ExcelDataReader-LICENSE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"/></ItemGroup></Project>

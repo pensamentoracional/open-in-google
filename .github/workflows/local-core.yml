@@ -1,7 +1,7 @@
 name: Local core
 on:
   push:
-    branches: ['feature/local-core', 'feature/google-import', 'feature/shortcut-replacement', 'feature/windows-integration', 'feature/installable-pilot', 'main']
+    branches: ['feature/local-core', 'feature/google-import', 'feature/shortcut-replacement', 'feature/windows-integration', 'feature/installable-pilot', 'feature/formats-environments', 'main']
   pull_request:
 permissions:
   contents: read
@@ -37,7 +37,7 @@ jobs:
         shell: pwsh
         run: |
           $package = 'artifacts/SheetsWindows-win-x64'
-          foreach ($file in @('LICENSE', 'SheetsWindows.exe', 'SheetsWindows.runtimeconfig.json', 'System.Windows.Forms.dll', 'coreclr.dll', 'e_sqlite3.dll')) {
+          foreach ($file in @('LICENSE', 'SheetsWindows.exe', 'SheetsWindows.runtimeconfig.json', 'System.Windows.Forms.dll', 'coreclr.dll', 'e_sqlite3.dll', 'ExcelDataReader.dll', 'third-party/ExcelDataReader-LICENSE.txt')) {
             if (!(Test-Path (Join-Path $package $file))) { throw "Missing package dependency: $file" }
           }
           $image = [IO.File]::ReadAllBytes((Join-Path $package 'SheetsWindows.exe'))

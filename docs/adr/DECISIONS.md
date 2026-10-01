@@ -20,3 +20,7 @@ Não haverá atualização remota silenciosa, sincronização bidirecional ou ex
 ## ADR 011 — Instalador por usuário e estado separado
 
 Fase 6: Inno Setup para instalar o pacote self-contained em `%LOCALAPPDATA%\Programs\SheetsWindows`; o estado permanece em `%LOCALAPPDATA%\SheetsWindows`. Evita implementar um instalador próprio e permite desinstalar o programa sem incluir dados no manifesto de remoção. O instalador invoca manutenção idempotente de associação, bloqueia destinos arbitrários e preserva conflitos de propriedade. Configuração e recuperação são UI nativa; recuperação offline não depende de OAuth. Gate manual no Windows 11 permanece obrigatório.
+
+## ADR 012 — Formatos com conferência e ambientes como cópia
+
+Fase 7: CSV/TSV são normalizados para XLSX com texto literal; ODS/XLS usam MIME nativo. Para novos formatos que permitem retirada, exportar XLSX e comparar células antes de aposentar o original; não confundir MIME nativo confirmado com fidelidade. XLS e ODS complexos continuam como cópia até certificação própria. OneDrive/rede também usam cópia e atalho privado, sem escrita/retirada na origem. O registry amplia formatos pelo schema 2 com migração transacional, sem recriar registros. Opções de texto requerem opt-in e não mudam silenciosamente operações existentes.

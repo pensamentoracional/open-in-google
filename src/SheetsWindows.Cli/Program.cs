@@ -54,12 +54,14 @@ try
         await new BackupStore(storage.BackupsPath).RestoreAsync(operation.Id, operation.Snapshot ?? throw new InvalidOperationException("Missing snapshot."), destination);
         Console.WriteLine("Backup restaurado sem sobrescrever arquivos: " + destination); return 0;
     }
-    var preparation = storage.CreatePreparation(); var locks = new FileOperationLock(storage.LocksPath);
+    var sourceReader = new SourceReader(copyEnvironments: args[0] == "import");
+    var textOptions = args[0] is "import" or "replace" && SpreadsheetFormats.Format(args[2]) != "xlsx" ? ExtendedConfiguration.Load(storage) : null;
+    var preparation = storage.CreatePreparation(sourceReader); var locks = new FileOperationLock(storage.LocksPath);
     using var handler = new HttpClientHandler { AllowAutoRedirect = false }; using var http = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(90) };
     var auth = new GoogleOAuth(http, client, new DpapiTokenVault(Path.Combine(storage.Root, "auth"), client.Id),
         new LoopbackAuthorizationReceiver(uri => Process.Start(new ProcessStartInfo(uri.AbsoluteUri) { UseShellExecute = true })), locks);
     if (args[0] == "login") { await auth.ConnectAsync(); Console.WriteLine("Google autorizado."); return 0; }
-    var importer = new GoogleImport(preparation, new SqliteOperationRegistry(storage.DatabasePath), new GoogleRemoteRegistry(Path.Combine(storage.Root, "google.db")), new SourceReader(), locks, auth, new GoogleDriveClient(http, auth));
+    var importer = new GoogleImport(preparation, new SqliteOperationRegistry(storage.DatabasePath), new GoogleRemoteRegistry(Path.Combine(storage.Root, "google.db")), sourceReader, locks, auth, new GoogleDriveClient(http, auth), textOptions);
     if (args[0] is "replace" or "resume")
     {
         var root = await File.ReadAllTextAsync(policyPath);
@@ -83,7 +85,7 @@ try
         }
         Console.WriteLine("Operação: " + receipt.Operation.Id);
         var replacement = new ReplacementCoordinator(new SqliteOperationRegistry(storage.DatabasePath), new GoogleRemoteRegistry(Path.Combine(storage.Root, "google.db")),
-            new BackupStore(storage.BackupsPath), locks, new ReplacementJournal(Path.Combine(storage.Root, "replacement.db")), reader, new BrowserLauncher());
+            new BackupStore(storage.BackupsPath), locks, new ReplacementJournal(Path.Combine(storage.Root, "replacement.db")), reader, new BrowserLauncher(), new ConversionVerifier(new GoogleDriveClient(http, auth), textOptions ?? (receipt.Operation.Format == "xlsx" ? null : ExtendedConfiguration.Load(storage))));
         Console.WriteLine(await replacement.ReplaceAsync(receipt)); return 0;
     }
     var url = await importer.ImportAsync(args[2]); Process.Start(new ProcessStartInfo(url.AbsoluteUri) { UseShellExecute = true }); Console.WriteLine(url.AbsoluteUri); return 0;

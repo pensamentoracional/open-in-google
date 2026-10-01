@@ -34,7 +34,8 @@ public sealed class LauncherTests
         using var w = new Workspace(); var plan = WindowsAssociationPlan.Values(Path.Combine(w.Root, "SheetsWindows.exe"));
         Assert.DoesNotContain(plan, v => v.Key.Contains("UserChoice", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(plan, v => v.Key == @"Software\Classes\.xlsx");
-        Assert.DoesNotContain(plan, v => v.Key.Contains(".url", StringComparison.OrdinalIgnoreCase) || v.Name is ".csv" or ".xls" or ".ods" or ".xlsm");
+        Assert.DoesNotContain(plan, v => v.Key.Contains(".url", StringComparison.OrdinalIgnoreCase) || v.Name is ".xlsm" or ".xlsb");
+        Assert.Equal(SpreadsheetFormats.Extensions.Order(), plan.Where(v => v.Key == WindowsAssociationPlan.CapabilityPath + @"\FileAssociations").Select(v => v.Name).Order());
         Assert.Equal("Sheets Windows", Uri.UnescapeDataString(WindowsAssociationPlan.DefaultsUri.Query.Split('=')[1]));
     }
     [Fact]

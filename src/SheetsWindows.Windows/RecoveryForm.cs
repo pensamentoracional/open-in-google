@@ -6,7 +6,7 @@ internal sealed class RecoveryForm : Form
 {
     private bool busy;
     private readonly ListBox entries = new() { Dock = DockStyle.Fill, HorizontalScrollbar = true };
-    private readonly Label status = new() { Dock = DockStyle.Top, Height = 70, Padding = new Padding(12), Text = "Restaure o XLSX original inicial em um novo arquivo. A restauração funciona offline, verifica o backup e nunca sobrescreve arquivos existentes. O Sheets e o atalho permanecem disponíveis." };
+    private readonly Label status = new() { Dock = DockStyle.Top, Height = 70, Padding = new Padding(12), Text = "Restaure o arquivo original inicial em um novo arquivo. A restauração funciona offline, verifica o backup e nunca sobrescreve arquivos existentes. O Sheets e o atalho permanecem disponíveis." };
     public RecoveryForm()
     {
         Text = "Restaurar backups — Sheets Windows"; ClientSize = new Size(760, 360); AutoScaleMode = AutoScaleMode.Dpi; StartPosition = FormStartPosition.CenterScreen;
@@ -22,7 +22,7 @@ internal sealed class RecoveryForm : Form
         restore.Click += async (_, _) =>
         {
             if (entries.SelectedItem is not RecoveryEntry entry) { status.Text = "Selecione um backup na lista."; return; }
-            using var dialog = new SaveFileDialog { Filter = "Planilha Excel|*.xlsx", FileName = Path.GetFileNameWithoutExtension(entry.OriginalPath) + "-restaurado.xlsx", OverwritePrompt = true };
+            using var dialog = new SaveFileDialog { Filter = "Arquivo original|*" + Path.GetExtension(entry.OriginalPath), DefaultExt = Path.GetExtension(entry.OriginalPath), FileName = Path.GetFileNameWithoutExtension(entry.OriginalPath) + "-restaurado" + Path.GetExtension(entry.OriginalPath), OverwritePrompt = true };
             if (dialog.ShowDialog(this) != DialogResult.OK) return;
             busy = true; restore.Enabled = false; entries.Enabled = false;
             try { await Task.Run(() => service.RestoreAsync(entry.Id, dialog.FileName)); status.Text = "Backup verificado e restaurado. O backup privado foi conservado."; }

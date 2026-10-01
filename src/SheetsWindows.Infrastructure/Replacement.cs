@@ -6,7 +6,7 @@ using SheetsWindows.Core;
 
 namespace SheetsWindows.Infrastructure;
 
-public sealed record ImportReceipt(ImportOperation Operation, Uri Url, string? SourcePath = null);
+public sealed record ImportReceipt(ImportOperation Operation, Uri Url, string? SourcePath = null, bool CanReplace = true);
 public sealed record ReplacementRecord(Guid OperationId, string ShortcutPath, string Url, int Step, string? SourcePath = null);
 public interface IRetirementLease : ISourceLease { void Retire(); }
 public interface IRetirementReader { IRetirementLease Open(string path); }
@@ -107,7 +107,7 @@ public static class InternetShortcut
 }
 
 public sealed class ReplacementCoordinator(IOperationRegistry local, IRemoteRegistry remote, IBackupStore backups,
-    IOperationLock locks, ReplacementJournal journal, IRetirementReader sources, IBrowserLauncher browser)
+    IOperationLock locks, ReplacementJournal journal, IRetirementReader sources, IBrowserLauncher browser, IConversionVerifier? conversion = null)
 {
     public async Task<string> ReplaceAsync(ImportReceipt receipt, CancellationToken ct = default)
     {
@@ -158,6 +158,11 @@ public sealed class ReplacementCoordinator(IOperationRegistry local, IRemoteRegi
         {
             if (source.Source.IdentityKey != op.SourceKey || source.Content.Length != snapshot.Length
                 || Convert.ToHexString(await SHA256.HashDataAsync(source.Content, ct)) != snapshot.Sha256) throw new LocalConflictException("Original changed; retirement blocked.");
+            if (op.Format != "xlsx")
+            {
+                if (conversion is null || !receipt.CanReplace) throw new CopyRequiredException();
+                await conversion.VerifyAsync(op, mapping, ct);
+            }
             if (record.Step == 1)
             {
                 browser.Open(receipt.Url); // Acceptance by shell, not proof that the page loaded.

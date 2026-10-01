@@ -97,3 +97,7 @@ Launcher WinExe/WinForms e registro HKCU apenas para XLSX na branch feature/wind
 ## Progresso da etapa 6
 
 Piloto instalável implementado na branch feature/installable-pilot: Inno Setup por usuário, configuração visual, recuperação offline de snapshots e desinstalação com preservação de dados. O CI verifica instalação/atualização/desinstalação/reinstalação e escolhas de padrão. Ver STAGE_6.md. A implementação não encerra o gate de uso real no Windows 11 com OAuth/Explorer; esse aceite manual permanece pendente antes de ampliar formatos.
+
+## Progresso da etapa 7
+
+Branch feature/formats-environments: CSV/TSV com encoding/delimitador estritos, ODS/XLS com MIME e validação próprios, conferência de valores exportados antes da retirada de CSV/TSV/ODS simples, modo de cópia para XLS/ODS complexos/OneDrive/rede e migração preservando registro anterior. Formatos/ambientes sem prova de fidelidade/permissões conservam o original; a retirada nesses casos permanece bloqueada. Ver STAGE_7.md. O aceite manual Windows 11/Google/Cloud Files reais continua pendente; não declarar certificação universal da etapa.

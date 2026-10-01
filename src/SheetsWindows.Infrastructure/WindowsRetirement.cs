@@ -30,7 +30,7 @@ public sealed class WindowsRetirementReader(string allowedRoot) : IRetirementRea
             if (!GetFileInformationByHandle(handle, out var info)) throw new Win32Exception(Marshal.GetLastWin32Error());
             if (info.Links != 1 || (info.Attributes & (0x400 | 0x1000 | 0x40000 | 0x400000)) != 0) throw new NotSupportedException("Hard links and redirects excluded.");
             var key = SourceReader.WindowsKey(handle);
-            return new Lease(new FileStream(handle, FileAccess.Read), new SourceDescriptor(key, full, "xlsx"));
+            return new Lease(new FileStream(handle, FileAccess.Read), new SourceDescriptor(key, full, SpreadsheetFormats.Format(full)));
         }
         catch { handle.Dispose(); throw; }
     }

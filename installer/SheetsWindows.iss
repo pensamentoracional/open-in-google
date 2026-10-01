@@ -1,7 +1,7 @@
 [Setup]
 AppId={{D970FA65-0364-4F10-A6AA-D4302F31B607}
 AppName=Sheets Windows
-AppVersion=0.6.0
+AppVersion=0.7.0
 AppPublisher=pensamentoracional
 DefaultDirName={localappdata}\Programs\SheetsWindows
 DefaultGroupName=Sheets Windows

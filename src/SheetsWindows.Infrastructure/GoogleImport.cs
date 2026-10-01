@@ -7,14 +7,14 @@ using SheetsWindows.Core;
 namespace SheetsWindows.Infrastructure;
 
 public sealed class GoogleImport(LocalPreparation preparation, IOperationRegistry local, IRemoteRegistry remote,
-    ISourceReader sources, IOperationLock locks, IGoogleAuth auth, GoogleDriveClient drive)
+    ISourceReader sources, IOperationLock locks, IGoogleAuth auth, GoogleDriveClient drive, TextImportOptions? textOptions = null)
 {
     public const int MaxBytes = 5 * 1024 * 1024;
     public async Task<Uri> ImportAsync(string path, CancellationToken ct = default) => (await ImportReceiptAsync(path, ct)).Url;
     public async Task<ImportReceipt> ImportReceiptAsync(string path, CancellationToken ct = default)
     {
         await using (var preflight = sources.Open(path))
-            if (preflight.Content.Length > MaxBytes) throw new NotSupportedException("MVP imports XLSX files up to 5 MiB.");
+            if (preflight.Content.Length > MaxBytes) throw new NotSupportedException("Imports support files up to 5 MiB.");
         var access = await auth.AccessAsync(cancellationToken: ct);
         var op = await preparation.PrepareAsync(access.AccountId, path, ct);
         await using var source = sources.Open(path);
@@ -26,24 +26,25 @@ public sealed class GoogleImport(LocalPreparation preparation, IOperationRegistr
         if (Convert.ToHexString(await SHA256.HashDataAsync(source.Content, ct)) != snapshot.Sha256) throw new LocalConflictException("Source changed; upload blocked.");
         // Hold the backup handle while checking and freezing the bytes that will be sent.
         await using var backup = new FileStream(snapshot.BackupPath, FileMode.Open, FileAccess.Read, FileShare.Read);
-        if (backup.Length > MaxBytes) throw new NotSupportedException("MVP imports XLSX files up to 5 MiB; resumable support is pending.");
+        if (backup.Length > MaxBytes) throw new NotSupportedException("Imports support files up to 5 MiB; resumable support is pending.");
         using var buffer = new MemoryStream(); await backup.CopyToAsync(buffer, ct); var bytes = buffer.ToArray();
         if (bytes.LongLength != snapshot.Length || Convert.ToHexString(SHA256.HashData(bytes)) != snapshot.Sha256) throw new InvalidDataException("Snapshot integrity failure.");
-        ValidateXlsx(bytes);
+        var payload = SpreadsheetFormats.Prepare(op.Format, bytes, textOptions);
+        var canReplace = op.Format == "xlsx" || payload.Expected is not null;
         var sheetKey = "sheet:" + op.Id.ToString("N");
         if (remote.Get(sheetKey) is not null)
         {
             var known = await EnsureAsync(sheetKey, access.AccountId, "sheet", snapshot.Sha256,
                 _ => throw new ReconciliationRequiredException(), ct);
-            return new ImportReceipt(op, GoogleDriveClient.Editor(known), source.Source.Path);
+            return new ImportReceipt(op, GoogleDriveClient.Editor(known), source.Source.Path, canReplace);
         }
         var folderKey = "folder:" + access.AccountId;
         string folder;
         await using (var folderLock = await locks.AcquireAsync(folderKey, ct))
             folder = await EnsureAsync(folderKey, access.AccountId, "folder", "", a => drive.CreateAsync(a, "Sheets Windows", null, null, ct), ct);
         var id = await EnsureAsync(sheetKey, access.AccountId, "sheet", snapshot.Sha256,
-            a => drive.CreateAsync(a, Path.GetFileNameWithoutExtension(path), folder, bytes, ct), ct);
-        return new ImportReceipt(op, GoogleDriveClient.Editor(id), source.Source.Path);
+            a => drive.CreateAsync(a, Path.GetFileNameWithoutExtension(path), folder, payload.Bytes, ct, payload.MimeType), ct);
+        return new ImportReceipt(op, GoogleDriveClient.Editor(id), source.Source.Path, canReplace);
     }
     private async Task<string> EnsureAsync(string key, string account, string kind, string hash, Func<RemoteAttempt, Task<string>> create, CancellationToken ct)
     {

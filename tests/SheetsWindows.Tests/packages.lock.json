@@ -29,6 +29,11 @@
         "resolved": "2.8.2",
         "contentHash": "vm1tbfXhFmjFMUmS4M0J0ASXz3/U5XvXBa6DOQUL3fEz4Vt6YPhv+ESCarx6M6D+9kJkJYZKCNvJMas1+nVfmQ=="
       },
+      "ExcelDataReader": {
+        "type": "Transitive",
+        "resolved": "3.9.0",
+        "contentHash": "3lEkUzG67UWPYj/xlX5Hua3MeQQktnK0B7WGzDjLpdJpBtct7szX0E4WB3Kl6C/8bNnbkyT2eO0FSPV+9CCemw=="
+      },
       "Microsoft.CodeCoverage": {
         "type": "Transitive",
         "resolved": "17.12.0",
@@ -149,6 +154,7 @@
       "sheetswindows.infrastructure": {
         "type": "Project",
         "dependencies": {
+          "ExcelDataReader": "[3.9.0, )",
           "Microsoft.Data.Sqlite": "[10.0.12, )",
           "SheetsWindows.Core": "[1.0.0, )",
           "System.Security.Cryptography.ProtectedData": "[10.0.12, )"

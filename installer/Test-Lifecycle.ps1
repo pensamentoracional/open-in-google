@@ -8,12 +8,15 @@ function Run-Checked($file, $arguments) {
 $state = Join-Path $env:LOCALAPPDATA 'SheetsWindows'
 $installed = Join-Path $env:LOCALAPPDATA 'Programs/SheetsWindows'
 if ((Test-Path $state) -or (Test-Path $installed) -or (Test-Path 'HKCU:/Software/SheetsWindows/Integration')) { throw 'Lifecycle test requires a clean disposable profile' }
-$defaultKey = 'HKCU:/Software/Classes/.xlsx'
-$choiceKey = 'HKCU:/Software/Microsoft/Windows/CurrentVersion/Explorer/FileExts/.xlsx/UserChoice'
+$extensions = @('.xlsx', '.ods', '.xls', '.csv', '.tsv')
 function Defaults-Snapshot {
-    $default = if (Test-Path $defaultKey) { (Get-Item $defaultKey).GetValue('') } else { $null }
-    $choice = if (Test-Path $choiceKey) { (Get-ItemProperty $choiceKey | Select-Object ProgId, Hash) | ConvertTo-Json -Compress } else { '<absent>' }
-    @("default:$default", "choice:$choice")
+    foreach ($extension in $extensions) {
+        $defaultKey = "HKCU:/Software/Classes/$extension"
+        $choiceKey = "HKCU:/Software/Microsoft/Windows/CurrentVersion/Explorer/FileExts/$extension/UserChoice"
+        $default = if (Test-Path $defaultKey) { (Get-Item $defaultKey).GetValue('') } else { $null }
+        $choice = if (Test-Path $choiceKey) { (Get-ItemProperty $choiceKey | Select-Object ProgId, Hash) | ConvertTo-Json -Compress } else { '<absent>' }
+        "$extension-default:$default"; "$extension-choice:$choice"
+    }
 }
 function Current-Uninstaller {
     $key = 'HKCU:/Software/Microsoft/Windows/CurrentVersion/Uninstall/{D970FA65-0364-4F10-A6AA-D4302F31B607}_is1'
@@ -30,9 +33,12 @@ $exe = Join-Path $installed 'SheetsWindows.exe'
 if (!(Test-Path $exe)) { throw 'Executable not installed' }
 Run-Checked $exe '--version'
 if (!(Test-Path 'HKCU:/Software/SheetsWindows/Integration')) { throw 'Association registration missing' }
+foreach ($extension in $extensions) {
+    if ((Get-ItemProperty 'HKCU:/Software/SheetsWindows/Integration/Capabilities/FileAssociations').$extension -ne 'SheetsWindows.Xlsx') { throw "Missing association: $extension" }
+}
 # Data sentinels are outside the installation manifest; Google network access is never needed.
-New-Item (Join-Path $state 'backups') -ItemType Directory -Force | Out-Null
-$sentinels = @('registry.db', 'google.db', 'replacement.db', 'launcher-client.json', 'replacement-root.txt', 'backups/preserved.snapshot')
+foreach ($directory in @('backups', 'auth', 'shortcuts')) { New-Item (Join-Path $state $directory) -ItemType Directory -Force | Out-Null }
+$sentinels = @('registry.db', 'google.db', 'replacement.db', 'launcher-client.json', 'replacement-root.txt', 'backups/preserved.snapshot', 'formats.json', 'auth/preserved.dat', 'shortcuts/preserved.url')
 foreach ($name in $sentinels) { [IO.File]::WriteAllText((Join-Path $state $name), "preserve:$name") }
 $shortcut = Join-Path $env:RUNNER_TEMP 'preserved.url'
 [IO.File]::WriteAllText($shortcut, "[InternetShortcut]`r`nURL=https://docs.google.com/spreadsheets/d/test/edit`r`n")

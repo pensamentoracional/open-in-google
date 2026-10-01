@@ -30,6 +30,8 @@ public sealed class GoogleTests
     }
     private sealed class DriveServer : HttpMessageHandler
     {
+        public byte[]? ExportOverride; public int Exports; public bool ExportUnauthorizedOnce;
+        public readonly Dictionary<string, byte[]> Uploaded = []; public readonly List<string> MediaTypes = [];
         public int Posts; public bool LoseSheetResponse, LoseFolderResponse, ListLag, DuplicateList, WrongMime, Trashed, DenyEdit, Get401;
         public readonly Dictionary<string, object> Files = [];
         public readonly List<string> Methods = [];
@@ -43,11 +45,23 @@ public sealed class GoogleTests
                 var mime = Value("mimeType"); var id = "file_" + Posts;
                 var file = new { id, mimeType = WrongMime && mime == GoogleDriveClient.SheetMime ? "application/octet-stream" : mime, trashed = Trashed && mime == GoogleDriveClient.SheetMime, capabilities = new { canEdit = !(DenyEdit && mime == GoogleDriveClient.SheetMime) }, appProperties = new Dictionary<string, string> { { "sw_operation", Value("sw_operation") }, { "sw_hash", Value("sw_hash") } } };
                 Files[id] = file;
+                if (req.Content is MultipartContent parts)
+                {
+                    var media = parts.Last(); MediaTypes.Add(media.Headers.ContentType!.MediaType!); Uploaded[id] = await media.ReadAsByteArrayAsync(ct);
+                }
                 if ((mime == GoogleDriveClient.SheetMime && LoseSheetResponse) || (mime == GoogleDriveClient.FolderMime && LoseFolderResponse))
                 { LoseSheetResponse = false; LoseFolderResponse = false; throw new HttpRequestException("Simulated lost response."); }
                 return Json(new { id });
             }
             if (req.Method != HttpMethod.Get) throw new InvalidOperationException("Unexpected destructive HTTP method.");
+            if (path.EndsWith("/export"))
+            {
+                Exports++;
+                if (ExportUnauthorizedOnce) { ExportUnauthorizedOnce = false; return new(HttpStatusCode.Unauthorized); }
+                var id = path.Split('/')[^2]; var upload = Uploaded[id];
+                var bytes = ExportOverride ?? (MediaTypes.Last() == "application/vnd.oasis.opendocument.spreadsheet" ? SpreadsheetFormats.WriteXlsx(SpreadsheetFormats.ReadOds(upload)!) : upload);
+                return new(HttpStatusCode.OK) { Content = new ByteArrayContent(bytes) };
+            }
             if (Get401) { Get401 = false; return new(HttpStatusCode.Unauthorized); }
             if (path.EndsWith("/files"))
             {
@@ -68,6 +82,112 @@ public sealed class GoogleTests
     {
         public bool Fail; public List<Uri> Opened { get; } = [];
         public void Open(Uri uri) { if (Fail) throw new IOException("Browser unavailable"); Opened.Add(uri); }
+    }
+    [Fact]
+    public async Task CsvImportKeepsRawBackupUploadsTypedWorkbookAndReopensWithoutPost()
+    {
+        using var w = new Workspace(); var path = Path.ChangeExtension(w.Source, ".csv"); var original = Encoding.UTF8.GetBytes("codigo,valor\n001,=1+1"); File.WriteAllBytes(path, original);
+        using var server = new DriveServer(); var importer = Importer(w, server); var receipt = await importer.ImportReceiptAsync(path);
+        Assert.True(receipt.CanReplace); Assert.Equal("csv", receipt.Operation.Format); Assert.Equal(original, File.ReadAllBytes(receipt.Operation.Snapshot!.BackupPath));
+        Assert.Equal(SpreadsheetFormats.XlsxMime, Assert.Single(server.MediaTypes));
+        SpreadsheetFormats.VerifyValues(SpreadsheetFormats.Prepare("csv", original).Expected!, server.Uploaded["file_2"]);
+        Assert.Equal(receipt.Url, await importer.ImportAsync(path)); Assert.Equal(2, server.Posts); Assert.True(File.Exists(path));
+    }
+    [Fact]
+    public async Task ExportRefreshesOnceChecksAccountAndComparesActualValues()
+    {
+        using var w = new Workspace(); var path = Path.ChangeExtension(w.Source, ".tsv"); File.WriteAllText(path, "codigo\tvalor\n001\t=1+1");
+        using var server = new DriveServer { ExportUnauthorizedOnce = true }; var auth = new FixedAuth(); var receipt = await Importer(w, server, auth).ImportReceiptAsync(path);
+        using var http = new HttpClient(server, false); var drive = new GoogleDriveClient(http, auth);
+        var mapping = new GoogleRemoteRegistry(Path.Combine(w.Root, "state", "google.db")).Get("sheet:" + receipt.Operation.Id.ToString("N"))!;
+        var verifier = new ConversionVerifier(drive); await verifier.VerifyAsync(receipt.Operation, mapping, default); Assert.Equal(2, server.Exports); Assert.Equal(1, auth.Refreshes);
+        server.ExportOverride = SpreadsheetFormats.WriteXlsx([new SheetValues("Dados", [new object?[] { "changed" }])]);
+        await Assert.ThrowsAsync<ConversionMismatchException>(() => verifier.VerifyAsync(receipt.Operation, mapping, default));
+        auth.Account = "other"; await Assert.ThrowsAsync<InvalidOperationException>(() => verifier.VerifyAsync(receipt.Operation, mapping, default));
+    }
+    private static void ConfigureLauncher(Workspace w, out LocalStorage storage)
+    {
+        storage = new(Path.Combine(w.Root, "state")); const string client = "pilot.apps.googleusercontent.com";
+        LauncherConfiguration.SaveClient(storage, "{\"installed\":{\"client_id\":\"" + client + "\"}}"); File.WriteAllText(PilotSetup.PolicyPath(storage), w.Root);
+        ExtendedConfiguration.Save(storage, new(), true);
+        if (OperatingSystem.IsWindows()) new DpapiTokenVault(Path.Combine(storage.Root, "auth"), client).Save(new(client, client + ":user", "test-token", "test-refresh", DateTimeOffset.UtcNow.AddHours(1)));
+    }
+    [WindowsFact]
+    public async Task NewLocalFormatsRetireOnlyAfterExportedValuesMatch()
+    {
+        foreach (var format in new[] { "csv", "tsv", "ods" })
+        {
+            using var w = new Workspace(); var path = Path.ChangeExtension(w.Source, "." + format);
+            var bytes = format == "ods" ? FormatTests.Ods("<table:table-row><table:table-cell office:value-type='string'><text:p>001</text:p></table:table-cell></table:table-row>") : Encoding.UTF8.GetBytes(format == "csv" ? "id,valor\n001,=1+1" : "id\tvalor\n001\t=1+1");
+            File.WriteAllBytes(path, bytes); ConfigureLauncher(w, out var storage); using var server = new DriveServer(); using var http = new HttpClient(server); var browser = new LauncherBrowser();
+            var shortcut = await new WindowsLauncher(storage, http, browser).OpenAsync(path);
+            Assert.False(File.Exists(path)); Assert.True(File.Exists(shortcut)); Assert.Equal(1, server.Exports); Assert.Equal(2, server.Posts);
+            Assert.Equal(bytes, File.ReadAllBytes(Assert.Single(w.Registry().Pending()).Snapshot!.BackupPath));
+        }
+    }
+    [WindowsFact]
+    public async Task FidelityFailurePreservesOriginalThenResumesWithoutNewUpload()
+    {
+        using var w = new Workspace(); var path = Path.ChangeExtension(w.Source, ".csv"); File.WriteAllText(path, "codigo,valor\n001,=1+1"); ConfigureLauncher(w, out var storage);
+        using var server = new DriveServer { ExportOverride = SpreadsheetFormats.WriteXlsx([new SheetValues("Dados", [new object?[] { "wrong" }])]) }; using var http = new HttpClient(server); var browser = new LauncherBrowser(); var launcher = new WindowsLauncher(storage, http, browser);
+        await Assert.ThrowsAsync<ConversionMismatchException>(() => launcher.OpenAsync(path)); Assert.True(File.Exists(path)); Assert.Empty(browser.Opened); Assert.Equal(2, server.Posts);
+        server.ExportOverride = null; await launcher.OpenAsync(path); Assert.False(File.Exists(path)); Assert.Equal(2, server.Posts);
+    }
+    [WindowsFact]
+    public async Task CopyModeAndComplexOdsNeverRetireOrWriteIntoTheSourceFolder()
+    {
+        using var w = new Workspace(); var path = Path.ChangeExtension(w.Source, ".ods"); var bytes = FormatTests.Ods("<table:table-row><table:table-cell table:formula='of:=1+1' office:value-type='float' office:value='2'/></table:table-row>"); File.WriteAllBytes(path, bytes);
+        ConfigureLauncher(w, out var storage); using var server = new DriveServer(); using var http = new HttpClient(server); var browser = new LauncherBrowser(); var launcher = new WindowsLauncher(storage, http, browser);
+        var shortcut = await launcher.OpenAsync(path); Assert.StartsWith(Path.Combine(storage.Root, "shortcuts"), shortcut); Assert.Equal(bytes, File.ReadAllBytes(path));
+        Assert.Equal(shortcut, await launcher.CopyAsync(path)); Assert.Equal(2, server.Posts); Assert.Equal(0, server.Exports); Assert.Empty(Directory.GetFiles(w.Root, "*.url"));
+    }
+    [WindowsFact]
+    public async Task BinaryXlsUsesItsOwnMimeKeepsBackupAndNeverRetires()
+    {
+        using var w = new Workspace(); var path = Path.ChangeExtension(w.Source, ".xls"); var bytes = FormatTests.Xls(); File.WriteAllBytes(path, bytes); ConfigureLauncher(w, out var storage);
+        using var server = new DriveServer(); using var http = new HttpClient(server); var launcher = new WindowsLauncher(storage, http, new LauncherBrowser());
+        var shortcut = await launcher.OpenAsync(path); Assert.True(File.Exists(shortcut)); Assert.Equal(bytes, File.ReadAllBytes(path)); Assert.Equal("application/vnd.ms-excel", Assert.Single(server.MediaTypes));
+        Assert.Equal(bytes, File.ReadAllBytes(Assert.Single(w.Registry().Pending()).Snapshot!.BackupPath)); Assert.Equal(0, server.Exports);
+    }
+    [WindowsFact]
+    public async Task CopyImportOnKnownOneDriveRootPreservesOriginalAndReusesTheMapping()
+    {
+        using var w = new Workspace(); File.WriteAllBytes(w.Source, Workbook()); ConfigureLauncher(w, out var storage); using var server = new DriveServer(); using var http = new HttpClient(server); var launcher = new WindowsLauncher(storage, http, new LauncherBrowser());
+        var old = Environment.GetEnvironmentVariable("OneDrive");
+        try
+        {
+            Environment.SetEnvironmentVariable("OneDrive", w.Root);
+            await Assert.ThrowsAsync<NotSupportedException>(() => launcher.OpenAsync(w.Source)); Assert.Equal(0, server.Posts);
+            var shortcut = await launcher.CopyAsync(w.Source); Assert.True(File.Exists(w.Source)); Assert.Equal(shortcut, await launcher.CopyAsync(w.Source)); Assert.Equal(2, server.Posts);
+        }
+        finally { Environment.SetEnvironmentVariable("OneDrive", old); }
+    }
+    [WindowsCiFact]
+    public async Task ReadOnlySmbShareCopiesWithoutWritingOrRetiringSource()
+    {
+        using var w = new Workspace(); File.WriteAllBytes(w.Source, Workbook()); ConfigureLauncher(w, out var storage);
+        var share = "SheetsWindowsTest_" + Guid.NewGuid().ToString("N"); var script = Path.Combine(w.Root, "share.ps1");
+        File.WriteAllText(script, "param($Action,$Name,$Root)\n$ErrorActionPreference='Stop'\nif ($Action -eq 'create') { New-SmbShare -Name $Name -Path $Root -ReadAccess ([Security.Principal.WindowsIdentity]::GetCurrent().Name) | Out-Null } else { Remove-SmbShare -Name $Name -Force -ErrorAction Stop }");
+        async Task Share(string action)
+        {
+            var start = new System.Diagnostics.ProcessStartInfo("powershell.exe") { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
+            foreach (var argument in new[] { "-NoProfile", "-NonInteractive", "-File", script, action, share, w.Root }) start.ArgumentList.Add(argument);
+            using var process = System.Diagnostics.Process.Start(start)!; using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            var output = process.StandardOutput.ReadToEndAsync(timeout.Token); var errors = process.StandardError.ReadToEndAsync(timeout.Token);
+            await process.WaitForExitAsync(timeout.Token); await output; var error = await errors;
+            Assert.True(process.ExitCode == 0, "Disposable SMB setup/cleanup failed: " + error);
+        }
+        await Share("create");
+        try
+        {
+            var unc = @"\\localhost\" + share + "\\" + Path.GetFileName(w.Source);
+            using var server = new DriveServer(); using var http = new HttpClient(server); var launcher = new WindowsLauncher(storage, http, new LauncherBrowser());
+            await Assert.ThrowsAsync<NotSupportedException>(() => launcher.OpenAsync(unc)); Assert.Equal(0, server.Posts);
+            var shortcut = await launcher.CopyAsync(unc); Assert.True(File.Exists(shortcut)); Assert.Equal(File.ReadAllBytes(w.Source), File.ReadAllBytes(unc));
+            Assert.Equal(shortcut, await launcher.CopyAsync(unc)); Assert.Equal(2, server.Posts); Assert.Empty(Directory.GetFiles(w.Root, "*.url"));
+            Assert.StartsWith("network:", Assert.Single(w.Registry().Pending()).SourceKey);
+        }
+        finally { await Share("remove"); }
     }
     [WindowsFact]
     public async Task ExplorerActivationImportsAndRetiresThroughTheComposedLauncher()

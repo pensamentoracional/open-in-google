@@ -16,13 +16,13 @@ public sealed class SqliteOperationRegistry : IOperationRegistry
         using var tx = db.BeginTransaction(deferred: false);
         using var version = Command(db, tx, "PRAGMA user_version;");
         var current = Convert.ToInt32(version.ExecuteScalar());
-        if (current > 1) throw new NotSupportedException("Database schema is newer than this application.");
+        if (current > 2) throw new NotSupportedException("Database schema is newer than this application.");
         if (current == 0)
         {
             using var schema = Command(db, tx, """
                 CREATE TABLE operations (
                     id TEXT PRIMARY KEY, account_id TEXT NOT NULL, source_key TEXT NOT NULL,
-                    source_path TEXT NOT NULL, format TEXT NOT NULL CHECK(format='xlsx'),
+                    source_path TEXT NOT NULL, format TEXT NOT NULL CHECK(format IN ('xlsx','ods','xls','csv','tsv')),
                     state TEXT NOT NULL CHECK(state IN ('Prepared','SnapshotReady')),
                     backup_path TEXT, sha256 TEXT, length INTEGER, version INTEGER NOT NULL,
                     CHECK((state='Prepared' AND backup_path IS NULL AND sha256 IS NULL AND length IS NULL)
@@ -34,9 +34,33 @@ public sealed class SqliteOperationRegistry : IOperationRegistry
                 CREATE TABLE journal (
                     sequence INTEGER PRIMARY KEY AUTOINCREMENT, operation_id TEXT NOT NULL REFERENCES operations(id),
                     kind TEXT NOT NULL, code TEXT, created_at TEXT NOT NULL);
-                PRAGMA user_version=1;
+                PRAGMA user_version=2;
                 """);
             schema.ExecuteNonQuery();
+        }
+        if (current == 1)
+        {
+            using var migrate = Command(db, tx, """
+                CREATE TABLE operations_v2 (
+                    id TEXT PRIMARY KEY, account_id TEXT NOT NULL, source_key TEXT NOT NULL,
+                    source_path TEXT NOT NULL, format TEXT NOT NULL CHECK(format IN ('xlsx','ods','xls','csv','tsv')),
+                    state TEXT NOT NULL CHECK(state IN ('Prepared','SnapshotReady')),
+                    backup_path TEXT, sha256 TEXT, length INTEGER, version INTEGER NOT NULL,
+                    CHECK((state='Prepared' AND backup_path IS NULL AND sha256 IS NULL AND length IS NULL)
+                       OR (state='SnapshotReady' AND backup_path IS NOT NULL AND sha256 IS NOT NULL AND length IS NOT NULL AND length>=0 AND length(sha256)=64)),
+                    UNIQUE(account_id,source_key));
+                INSERT INTO operations_v2 SELECT * FROM operations;
+                CREATE TABLE journal_v2 (
+                    sequence INTEGER PRIMARY KEY AUTOINCREMENT, operation_id TEXT NOT NULL REFERENCES operations_v2(id),
+                    kind TEXT NOT NULL, code TEXT, created_at TEXT NOT NULL);
+                INSERT INTO journal_v2 SELECT * FROM journal;
+                DROP TABLE journal;
+                DROP TABLE operations;
+                ALTER TABLE operations_v2 RENAME TO operations;
+                ALTER TABLE journal_v2 RENAME TO journal;
+                PRAGMA user_version=2;
+                """);
+            migrate.ExecuteNonQuery();
         }
         tx.Commit();
     }
@@ -76,7 +100,7 @@ public sealed class SqliteOperationRegistry : IOperationRegistry
         ArgumentException.ThrowIfNullOrWhiteSpace(accountId);
         ArgumentException.ThrowIfNullOrWhiteSpace(source.IdentityKey);
         ArgumentException.ThrowIfNullOrWhiteSpace(source.Path);
-        if (source.Format != "xlsx") throw new NotSupportedException("Only XLSX is supported.");
+        if (!SpreadsheetFormats.Extensions.Contains("." + source.Format)) throw new NotSupportedException("Unsupported format.");
         using var db = Open(); using var tx = db.BeginTransaction(deferred: false);
         ImportOperation? op;
         using (var find = Command(db, tx, $"SELECT {Columns} FROM operations WHERE account_id=$a AND source_key=$s",
@@ -86,10 +110,11 @@ public sealed class SqliteOperationRegistry : IOperationRegistry
         {
             op = new(Guid.NewGuid(), accountId, source.IdentityKey, source.Path, source.Format, OperationState.Prepared, null, 0);
             using var insert = Command(db, tx,
-                "INSERT INTO operations(id,account_id,source_key,source_path,format,state,version) VALUES($id,$a,$s,$p,'xlsx','Prepared',0)",
-                ("$id", op.Id.ToString("N")), ("$a", accountId), ("$s", source.IdentityKey), ("$p", source.Path));
+                "INSERT INTO operations(id,account_id,source_key,source_path,format,state,version) VALUES($id,$a,$s,$p,$f,'Prepared',0)",
+                ("$id", op.Id.ToString("N")), ("$a", accountId), ("$s", source.IdentityKey), ("$p", source.Path), ("$f", source.Format));
             insert.ExecuteNonQuery(); Event(db, tx, op.Id, "Prepared");
         }
+        if (op.Format != source.Format) throw new LocalConflictException("Source extension changed its interpretation.");
         using (var alias = Command(db, tx, "INSERT OR IGNORE INTO source_aliases(account_id,source_key,path) VALUES($a,$s,$p)",
             ("$a", accountId), ("$s", source.IdentityKey), ("$p", source.Path))) alias.ExecuteNonQuery();
         tx.Commit(); return op;
