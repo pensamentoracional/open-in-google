@@ -8,7 +8,7 @@ internal sealed class RecoveryForm : Form
     private CancellationTokenSource? activeCancellation;
     private readonly ListBox entries = new() { Dock = DockStyle.Fill, HorizontalScrollbar = true };
     private readonly Label status = new() { Dock = DockStyle.Top, Height = 70, Padding = new Padding(12), Text = "Restaure o arquivo original inicial em um novo arquivo. A restauração funciona offline, verifica o backup e nunca sobrescreve arquivos existentes. O Sheets e o atalho permanecem disponíveis." };
-    public RecoveryForm()
+    public RecoveryForm(bool preview = false)
     {
         Text = "Recuperar operação e backups — ZagoSheetsWin"; ClientSize = new Size(900, 470); AutoScaleMode = AutoScaleMode.Dpi; StartPosition = FormStartPosition.CenterScreen;
         var restore = new Button { Text = "Restaurar em…", Dock = DockStyle.Bottom, Height = 44 };
@@ -52,7 +52,7 @@ internal sealed class RecoveryForm : Form
         };
         FormClosing += (_, e) => { if (busy) { e.Cancel = true; activeCancellation?.Cancel(); } };
         var service = new BackupRecovery(LocalStorage.ForCurrentUser());
-        Shown += (_, _) =>
+        if (!preview) Shown += (_, _) =>
         {
             try { foreach (var entry in service.List()) entries.Items.Add(entry); if (entries.Items.Count == 0) status.Text = "Nenhum backup registrado neste usuário do Windows."; }
             catch (Exception ex) when (LauncherErrors.Expected(ex)) { status.Text = LauncherErrors.Message(ex); }
