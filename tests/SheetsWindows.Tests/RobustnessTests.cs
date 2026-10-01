@@ -201,6 +201,26 @@ public sealed class RobustnessTests
         using var oversized = new Responses((_, _) => new(HttpStatusCode.OK) { Content = new ByteArrayContent(new byte[1024 * 1024 + 1]) }); using var httpLarge = new HttpClient(oversized);
         await Assert.ThrowsAsync<InvalidDataException>(() => new GoogleDriveClient(httpLarge, new Auth()).GetAsync("A", "sheet_1", default));
     }
+    private sealed class StalledStream : Stream
+    {
+        public override bool CanRead => true; public override bool CanSeek => false; public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException(); public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+        public override void Flush() => throw new NotSupportedException(); public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException(); public override void SetLength(long value) => throw new NotSupportedException(); public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        { await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken); return 0; }
+    }
+    [Fact]
+    public async Task ResponseBodyAfterHeadersIsCoveredByOperationDeadline()
+    {
+        using var server = new Responses((_, _) => new(HttpStatusCode.OK) { Content = new StreamContent(new StalledStream()) }); using var http = new HttpClient(server);
+        var drive = new GoogleDriveClient(http, new Auth(), requestTimeout: TimeSpan.FromMilliseconds(50));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => drive.GetAsync("A", "sheet_1", default));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => drive.ExportXlsxAsync("A", "sheet_1", default));
+        using var w = new Workspace(); var store = Store(w); var bytes = new byte[100]; store.Save(Attempt(), bytes, "application/test", new Uri("https://www.googleapis.com/upload/drive/v3/files?upload_id=secret"));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => new ResumableUpload(http, new Auth(), store, TimeSpan.FromMilliseconds(50)).ResumeAsync(Attempt(), bytes, "application/test", default));
+        Assert.NotNull(store.Get(Attempt(), bytes, "application/test"));
+    }
     [Fact]
     public void NormalizedTextPayloadIsDeterministicForResumeBinding()
     {

@@ -59,7 +59,7 @@ public static class LauncherConfiguration
 public static class LauncherErrors
 {
     public static bool Expected(Exception ex) => ex is IOException or InvalidDataException or UnauthorizedAccessException or InvalidOperationException
-        or NotSupportedException or ArgumentException or Win32Exception or HttpRequestException or OperationCanceledException
+        or TimeoutException or NotSupportedException or ArgumentException or Win32Exception or HttpRequestException or OperationCanceledException
         or System.Security.Cryptography.CryptographicException or Microsoft.Data.Sqlite.SqliteException or System.Text.Json.JsonException or System.Xml.XmlException or KeyNotFoundException or SecurityException or ExcelDataReader.Exceptions.ExcelReaderException;
     public static string Message(Exception ex) => ex switch
     {
@@ -69,6 +69,7 @@ public static class LauncherErrors
         ConversionMismatchException => "A conferência encontrou diferença nos dados convertidos. O original e o backup foram preservados. Não houve nova importação nem atualização remota.",
         CopyRequiredException => "Esta planilha requer importação de cópia; o original deve ser preservado.",
         LocalConflictException => "O arquivo ou sua associação mudou. A substituição foi interrompida para conservar as versões existentes.",
+        TimeoutException => "Outra operação ainda está usando o arquivo ou o registro. Aguarde e retome; o original e os backups foram conservados.",
         OperationCanceledException => "Operação interrompida. O backup e o registro de recuperação, quando criados, foram conservados.",
         _ => "Não foi possível concluir. Confira a configuração, a conexão e se o arquivo está aberto em outro aplicativo. Backups já criados permanecem disponíveis."
     };

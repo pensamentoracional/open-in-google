@@ -8,9 +8,9 @@ using SheetsWindows.Core;
 namespace SheetsWindows.Infrastructure;
 
 public sealed record GoogleFile(string Id, string MimeType, bool Trashed, bool CanEdit, Dictionary<string, string> Properties);
-public sealed class GoogleDriveClient(HttpClient http, IGoogleAuth auth, UploadSessionStore? sessions = null)
+public sealed class GoogleDriveClient(HttpClient http, IGoogleAuth auth, UploadSessionStore? sessions = null, TimeSpan? requestTimeout = null)
 {
-    private readonly ResumableUpload? uploads = sessions is null ? null : new(http, auth, sessions);
+    private readonly ResumableUpload? uploads = sessions is null ? null : new(http, auth, sessions, requestTimeout);
     public bool CanResume(RemoteAttempt attempt, byte[] bytes, string mime) => uploads?.HasSession(attempt, bytes, mime) == true;
     public Task<string> ResumeAsync(RemoteAttempt attempt, byte[] bytes, string mime, CancellationToken ct) =>
         uploads?.ResumeAsync(attempt, bytes, mime, ct) ?? throw new ReconciliationRequiredException();
@@ -21,6 +21,7 @@ public sealed class GoogleDriveClient(HttpClient http, IGoogleAuth auth, UploadS
     public static Uri Editor(string id) { ValidateId(id); return new Uri($"https://docs.google.com/spreadsheets/d/{id}/edit"); }
     private async Task<JsonDocument> SendAsync(Func<HttpRequestMessage> request, string account, CancellationToken ct)
     {
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct); deadline.CancelAfter(requestTimeout ?? TimeSpan.FromSeconds(90)); ct = deadline.Token;
         var refreshed = false; var refresh = false; var retries = 0;
         for (var i = 0; i < 5; i++)
         {
@@ -79,6 +80,7 @@ public sealed class GoogleDriveClient(HttpClient http, IGoogleAuth auth, UploadS
     }
     public async Task<byte[]> ExportXlsxAsync(string account, string id, CancellationToken ct)
     {
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct); deadline.CancelAfter(requestTimeout ?? TimeSpan.FromSeconds(90)); ct = deadline.Token;
         ValidateId(id);
         for (var retry = 0; retry < 2; retry++)
         {

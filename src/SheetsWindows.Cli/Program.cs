@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.ComponentModel;
 using SheetsWindows.Core;
 using SheetsWindows.Infrastructure;
 
@@ -90,7 +89,7 @@ try
     }
     var url = await importer.ImportAsync(args[2]); Process.Start(new ProcessStartInfo(url.AbsoluteUri) { UseShellExecute = true }); Console.WriteLine(url.AbsoluteUri); return 0;
 }
-catch (Exception ex) when (ex is Microsoft.Data.Sqlite.SqliteException or UnauthorizedAccessException or Win32Exception or InvalidDataException or IOException or InvalidOperationException or NotSupportedException or ArgumentException or System.Net.Http.HttpRequestException or OperationCanceledException or System.Text.Json.JsonException or System.Xml.XmlException or KeyNotFoundException)
+catch (Exception ex) when (LauncherErrors.Expected(ex))
 {
     Console.Error.WriteLine(ex is AuthorizationRequiredException ? "Autentique com o comando login." : ex is ReconciliationRequiredException ? "Resultado pendente de reconciliação. O original permanece preservado." : "A operação não foi concluída. Consulte o journal e o backup privado antes de retomar; não recrie nem remova arquivos manualmente."); return 1;
 }

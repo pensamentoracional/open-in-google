@@ -7,11 +7,12 @@ using SheetsWindows.Core;
 
 namespace SheetsWindows.Infrastructure;
 
-public sealed class ResumableUpload(HttpClient http, IGoogleAuth auth, UploadSessionStore sessions)
+public sealed class ResumableUpload(HttpClient http, IGoogleAuth auth, UploadSessionStore sessions, TimeSpan? requestTimeout = null)
 {
     public bool HasSession(RemoteAttempt attempt, byte[] bytes, string mime) => sessions.Get(attempt, bytes, mime) is not null;
     public async Task<string> StartAsync(RemoteAttempt attempt, string metadata, byte[] bytes, string mime, CancellationToken ct)
     {
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct); deadline.CancelAfter(requestTimeout ?? TimeSpan.FromSeconds(90)); ct = deadline.Token;
         if (bytes.Length == 0) throw new InvalidDataException("Empty upload.");
         using var request = new HttpRequestMessage(HttpMethod.Post, "https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id")
         { Content = new StringContent(metadata, Encoding.UTF8, "application/json") };
@@ -24,6 +25,7 @@ public sealed class ResumableUpload(HttpClient http, IGoogleAuth auth, UploadSes
     }
     public async Task<string> ResumeAsync(RemoteAttempt attempt, byte[] bytes, string mime, CancellationToken ct)
     {
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct); deadline.CancelAfter(requestTimeout ?? TimeSpan.FromSeconds(90)); ct = deadline.Token;
         var session = sessions.Get(attempt, bytes, mime) ?? throw new ReconciliationRequiredException();
         var location = UploadSessionStore.ValidateLocation(session.Location);
         var offset = 0; var query = true; var stalled = 0; var transient = 0; var refresh = false; var refreshed = false;

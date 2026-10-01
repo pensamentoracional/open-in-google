@@ -8,7 +8,7 @@ Launcher e importação CLI usam sessão resumable da Drive API. O registro de i
 
 A transferência usa blocos de 256 KiB. Toda retomada começa com PUT vazio de consulta; o cabeçalho Range do servidor determina o próximo byte. Resposta perdida ao concluir é recuperada pela consulta, sem retransmitir conteúdo. PUT se limita à sessão de criação; não existe PATCH de planilha existente nem DELETE remoto. Fontes continuam limitadas a 5 MiB. As sessões protegidas permanecem para evidência de recuperação, junto aos journals e backups.
 
-Falhas transitórias de transporte, 429 e 5xx permitem até três tentativas de consulta com espera limitada. OAuth 401 permite uma renovação durante a sessão, sempre conferindo a conta. Cancelamento e timeout conservam a sessão. GET de metadados também tem repetição limitada; POST de criação/início nunca é repetido automaticamente. JSON de metadados até 1 MiB; resposta final de upload até 64 KiB; paginação até 100 tokens distintos. Sem progresso repetido, Range inválido ou expiração bloqueiam a transferência.
+Falhas transitórias de transporte, 429 e 5xx permitem até três tentativas de consulta com espera limitada. OAuth 401 permite uma renovação durante a sessão, sempre conferindo a conta. Cancelamento e timeout conservam a sessão. Há prazo total de 90 segundos por invocação de upload/retomada ou consulta/exportação, incluindo a leitura do corpo após os cabeçalhos; a retomada seguinte consulta o progresso já aceito. GET de metadados também tem repetição limitada; POST de criação/início nunca é repetido automaticamente. JSON de metadados até 1 MiB; resposta final de upload até 64 KiB; paginação até 100 tokens distintos. Sem progresso repetido, Range inválido ou expiração bloqueiam a transferência.
 
 Se a sessão expirar ou o POST inicial perder sua resposta, procurar a associação pelo marcador persistente. Se não houver exatamente uma planilha validável, exigir reconciliação e conservar original/backup. Não iniciar outra sessão silenciosamente. Isso é uma restrição deliberada para evitar duplicatas; retomada não é uma promessa de recuperação automática de qualquer resultado ambíguo.
 
@@ -54,6 +54,7 @@ O CI compila um pacote de versão declarada 0.7 **com os mesmos binários atuais
 | Conta, conteúdo, MIME ou fonte muda | Bloqueio antes de continuar | ChangedPayloadAccountAndMime… / RecoveryByIdCanChooseCopy… |
 | Sessão aponta a outro host / arquivo protegido alterado | Rejeitar; sem enviar conteúdo | UntrustedSession… / ProductionSessionUses… |
 | OAuth 401 / GET 503 / POST 503 | Renovação limitada / GET repetido / POST único | UnauthorizedStatus… / ReadOnlyMetadata… / CreatePost… |
+| Resposta trava depois dos cabeçalhos | Cancelar pelo prazo total e conservar a sessão | ResponseBodyAfterHeaders… |
 | Paginação cíclica / resposta grande | Limites explícitos | RepeatedPaginationToken… |
 | Navegador falha | Fonte mantida; painel conclui sem novo upload | RecoveryByIdCompletesBrowserFailure… |
 | Diagnóstico cresce / contém campo estranho / pasta bloqueada | Rotação limitada / exportação sanitizada / operação independente | DiagnosticsRotate… / BrokenDiagnosticDirectory… |
