@@ -66,8 +66,8 @@ O CI compila também o projeto WinForms no Linux com EnableWindowsTargeting, mas
 
 Compilação local Release sem avisos ou erros; restore --locked-mode aprovado. Local/Linux: 85 aprovados / 17 testes Windows pulados, zero falhas, em 102 testes. CI final aprovado no run 36857132899, commit de código 2aa05f06e64a3d8d0b1ba3d992d65d3f002fe1f3: Windows 101 aprovados / 1 teste Unix pulado; Linux 85 aprovados / 17 testes Windows pulados; zero falhas. O pacote inclui LICENSE com atribuição MIT original. Publish win-x64, verificação das dependências/subsistema de GUI e execução de --version aprovados.
 
-- CI: https://github.com/pensamentoracional/open-in-google/actions/runs/36857132899
-- Pacote aprovado: https://github.com/pensamentoracional/open-in-google/actions/runs/36857132899/artifacts/11158849479
+- CI: https://github.com/zagozago/ZagoSheetsWin/actions/runs/36857132899
+- Pacote aprovado: https://github.com/zagozago/ZagoSheetsWin/actions/runs/36857132899/artifacts/11158849479
 - Artifact SheetsWindows-win-x64, ZIP de 52.595.336 bytes, SHA-256 225d9eb3b1f602c2633436e4121f5cb6544d8fe4766b6ee3786edcf2e689cfc7. Retenção indicada pelo GitHub até 2026-12-30; futuras execuções geram novos artifacts.
 
 O pacote não contém credenciais, tokens ou arquivos de usuário. Não houve instalação ou mudança de padrão no computador de Fernando. Interface visual, escolha real de app padrão, duplo clique no Explorer e Google real permanecem verificações manuais do piloto.

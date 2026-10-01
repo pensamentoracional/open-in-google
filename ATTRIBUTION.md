@@ -4,7 +4,7 @@ ZagoSheetsWin é uma evolução do projeto Open in Google, de Swati K (SwatiK425
 
 Projeto original: https://github.com/SwatiK425/open-in-google/
 Autora original: Swati K — https://github.com/SwatiK425
-Fork e evolução: https://github.com/pensamentoracional/open-in-google
+Fork e evolução: https://github.com/zagozago/ZagoSheetsWin
 
 Copyright (c) 2026 Swati K — preservado integralmente em LICENSE.
 A identificação Zagotools se refere à evolução e à identidade visual deste aplicativo; não substitui a autoria original nem implica endosso da autora.

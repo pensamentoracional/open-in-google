@@ -46,11 +46,11 @@ Os testes de Google usam HTTP simulado; a UI e a seleção de padrão no Explore
 ## Evidências da entrega
 
 Código validado: `fa4cfa4d335652f36b4a37efd4e071d9ecbf45e1`.
-[Workflow 36866831248](https://github.com/pensamentoracional/open-in-google/actions/runs/36866831248), executado em 2026-10-01: ambos jobs aprovados.
+[Workflow 36866831248](https://github.com/zagozago/ZagoSheetsWin/actions/runs/36866831248), executado em 2026-10-01: ambos jobs aprovados.
 
 - Windows: **110 aprovados, 1 ignorado por plataforma, 0 falhas**, 111 casos totais.
 - Linux: **94 aprovados, 17 ignorados por plataforma, 0 falhas**, mesmos 111 casos.
 - Compilação do instalador com Inno Setup 6.7.1, inicialização do executável self-contained e ciclo instalação/atualização/desinstalação/reinstalação aprovados. A saída confirmou preservação de estado, snapshot, atalho e padrões Windows. O teste consulta o desinstalador atualmente registrado, sem depender de um sufixo numérico fixo.
-- [Baixar instalador piloto](https://github.com/pensamentoracional/open-in-google/actions/runs/36866831248/artifacts/11163847812): artefato ZIP **SheetsWindows-Setup-win-x64**, 37.645.958 bytes; SHA-256 do ZIP `843e53ba5901282812ea953ff8d6d4bb3124b410980408104147e0538ae0f1f1`. Extrair e executar o EXE dentro dele. Artefato disponível até 2026-12-30, sujeito à retenção do GitHub.
+- [Baixar instalador piloto](https://github.com/zagozago/ZagoSheetsWin/actions/runs/36866831248/artifacts/11163847812): artefato ZIP **SheetsWindows-Setup-win-x64**, 37.645.958 bytes; SHA-256 do ZIP `843e53ba5901282812ea953ff8d6d4bb3124b410980408104147e0538ae0f1f1`. Extrair e executar o EXE dentro dele. Artefato disponível até 2026-12-30, sujeito à retenção do GitHub.
 
 Main e upstream não foram alterados. Esta evidência automatizada não substitui o aceite manual com Google real no Windows 11.

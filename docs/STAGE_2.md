@@ -38,7 +38,7 @@ dotnet test SheetsWindows.slnx --configuration Release -m:1 -nodeReuse:false -p:
 
 Cenários: reabertura sem duplicação, 16 preparações concorrentes, cópias iguais independentes, isolamento por conta, corrupção/ausência do backup, falha na leitura/escrita/persistência, recuperação do snapshot órfão, fonte alterada, rollback da transição quando evento falha, versão futura/banco corrompido, restauração sem overwrite, cancelamento/timeout e lock entre processos com crash. Testes Windows cobrem proteção do handle, renomeação/cópia e ACL privada.
 
-Resultados locais: 25 aprovados, 3 pulados por requerer Windows, 0 falhas. CI Windows/Linux em .github/workflows/local-core.yml aprovada no run 36815471525, commit dcb32daa5cca3832408ebb7e7402c34442fed4df. Linux: 25 aprovados e 3 pulados; Windows: 27 aprovados e 1 pulado (permissões Unix). Zero falhas em ambos. Evidência: https://github.com/pensamentoracional/open-in-google/actions/runs/36815471525. windows-latest valida runtime Windows em runner servidor, não substitui piloto manual Windows 11.
+Resultados locais: 25 aprovados, 3 pulados por requerer Windows, 0 falhas. CI Windows/Linux em .github/workflows/local-core.yml aprovada no run 36815471525, commit dcb32daa5cca3832408ebb7e7402c34442fed4df. Linux: 25 aprovados e 3 pulados; Windows: 27 aprovados e 1 pulado (permissões Unix). Zero falhas em ambos. Evidência: https://github.com/zagozago/ZagoSheetsWin/actions/runs/36815471525. windows-latest valida runtime Windows em runner servidor, não substitui piloto manual Windows 11.
 
 ## Limites e próxima etapa
 

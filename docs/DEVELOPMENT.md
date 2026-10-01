@@ -4,10 +4,10 @@ Base upstream e histórico preservados. Branch atual docs/foundation; main perma
 
 ## Fork remoto confirmado
 
-Fork: https://github.com/pensamentoracional/open-in-google. A conta e a integração têm acesso de escrita ao fork após a seleção do repositório na instalação GitHub. Origin aponta para esse fork; upstream aponta para SwatiK425/open-in-google e mantém push bloqueado. Branch de documentação: docs/foundation. Main ainda preserva a base upstream.
+Fork: https://github.com/zagozago/ZagoSheetsWin. A conta e a integração têm acesso de escrita ao fork após a seleção do repositório na instalação GitHub. Origin aponta para esse fork; upstream aponta para SwatiK425/open-in-google e mantém push bloqueado. Branch de documentação: docs/foundation. Main ainda preserva a base upstream.
 
 ```bash
-git remote add origin https://github.com/pensamentoracional/open-in-google.git
+git remote add origin https://github.com/zagozago/ZagoSheetsWin.git
 git push -u origin docs/foundation
 ```
 

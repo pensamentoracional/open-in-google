@@ -1,5 +1,5 @@
 #ifndef PilotVersion
-  #define PilotVersion "0.9.0"
+  #define PilotVersion "0.9.1"
 #endif
 [Setup]
 AppId={{D970FA65-0364-4F10-A6AA-D4302F31B607}
@@ -7,8 +7,8 @@ AppName=ZagoSheetsWin
 UninstallDisplayName=ZagoSheetsWin
 AppVersion={#PilotVersion}
 AppPublisher=Zagotools
-AppPublisherURL=https://github.com/pensamentoracional/open-in-google
-AppSupportURL=https://github.com/pensamentoracional/open-in-google/issues
+AppPublisherURL=https://github.com/zagozago/ZagoSheetsWin
+AppSupportURL=https://github.com/zagozago/ZagoSheetsWin/issues
 SetupIconFile=..\branding\zagosheetswin.ico
 WizardImageFile=..\branding\wizard.bmp
 WizardSmallImageFile=..\branding\wizard-small.bmp

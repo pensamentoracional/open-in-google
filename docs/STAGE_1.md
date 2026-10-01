@@ -2,7 +2,7 @@
 
 Concluído localmente: preservação do histórico, sete arquivos upstream auditados, MIT original intacta, README próprio com atribuição e aviso sobre scripts antigos, auditoria, arquitetura, dez decisões, roadmap anexado e guia de desenvolvimento. Branch docs/foundation; upstream configurado e push bloqueado. Nenhum código de produção novo.
 
-Fork remoto confirmado: https://github.com/pensamentoracional/open-in-google. Origin configurado para o fork e publicação da branch docs/foundation autorizada pela etapa 1. Main não será alterada por esta publicação.
+Fork remoto confirmado: https://github.com/zagozago/ZagoSheetsWin. Origin configurado para o fork e publicação da branch docs/foundation autorizada pela etapa 1. Main não será alterada por esta publicação.
 
 Verificações: comparar scripts/SETUP/LICENSE/.gitignore com SHA upstream, conferir links Markdown locais, git diff --check, verificar bundle com git bundle verify e testar clone do pacote. Verificações de documentação e integridade não substituem testes de software.
 

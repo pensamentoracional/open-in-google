@@ -64,20 +64,20 @@ A matriz complementa concorrência, crash por transição, fidelidade, SMB, migr
 
 ## Contribuição genérica isolada
 
-A branch `fix/literal-paths` parte diretamente da revisão original `124419b9`, sem nenhum componente C# ou política de substituição do fork. Corrige leitura de tamanho e existência com `-LiteralPath`: um nome com colchetes não deve selecionar outro arquivo como wildcard. O teste extrai somente a função de upload por AST, usa dois arquivos com tamanhos diferentes e HTTP falso, e roda no Windows PowerShell 5.1 sem OAuth, interface ou registro. A contribuição está no [PR independente #1, em rascunho no fork](https://github.com/pensamentoracional/open-in-google/pull/1), com [CI PowerShell aprovado](https://github.com/pensamentoracional/open-in-google/actions/runs/36879481261). Não foi enviada nem mesclada no upstream; sua aceitação upstream não condiciona o produto.
+A branch `fix/literal-paths` parte diretamente da revisão original `124419b9`, sem nenhum componente C# ou política de substituição do fork. Corrige leitura de tamanho e existência com `-LiteralPath`: um nome com colchetes não deve selecionar outro arquivo como wildcard. O teste extrai somente a função de upload por AST, usa dois arquivos com tamanhos diferentes e HTTP falso, e roda no Windows PowerShell 5.1 sem OAuth, interface ou registro. A contribuição está no [PR independente #1, em rascunho no fork](https://github.com/zagozago/ZagoSheetsWin/pull/1), com [CI PowerShell aprovado](https://github.com/zagozago/ZagoSheetsWin/actions/runs/36879481261). Não foi enviada nem mesclada no upstream; sua aceitação upstream não condiciona o produto.
 
 ## Registro de validação
 
 Código aprovado: `dfe2922da406a5bb1904849e097c5dd19af5e858` na branch `feature/robustness`.
 
-[CI aprovado em Windows e Linux — execução 36882411612](https://github.com/pensamentoracional/open-in-google/actions/runs/36882411612): restore com lockfiles, build sem warnings, **169 testes**. Windows: **168 aprovados, 1 ignorado** (teste Unix). Linux: **142 aprovados, 27 ignorados** (verificações Windows/DPAPI/SMB). Zero falhas. No Windows, o CI também aprovou o pacote autossuficiente, verificação de hash, política de atualização/downgrade, desinstalação e reinstalação com todos os sentinelas e padrões do usuário preservados.
+[CI aprovado em Windows e Linux — execução 36882411612](https://github.com/zagozago/ZagoSheetsWin/actions/runs/36882411612): restore com lockfiles, build sem warnings, **169 testes**. Windows: **168 aprovados, 1 ignorado** (teste Unix). Linux: **142 aprovados, 27 ignorados** (verificações Windows/DPAPI/SMB). Zero falhas. No Windows, o CI também aprovou o pacote autossuficiente, verificação de hash, política de atualização/downgrade, desinstalação e reinstalação com todos os sentinelas e padrões do usuário preservados.
 
-[Baixar instalador 0.8 aprovado](https://github.com/pensamentoracional/open-in-google/actions/runs/36882411612/artifacts/11171354492). Artefato `SheetsWindows-Setup-win-x64`, ZIP de **37.727.610 bytes**, expira em **30/12/2026**. SHA-256 do ZIP (não do EXE extraído):
+[Baixar instalador 0.8 aprovado](https://github.com/zagozago/ZagoSheetsWin/actions/runs/36882411612/artifacts/11171354492). Artefato `SheetsWindows-Setup-win-x64`, ZIP de **37.727.610 bytes**, expira em **30/12/2026**. SHA-256 do ZIP (não do EXE extraído):
 
 ```text
 8dfd685a4e0a1b3f5b565ba45035f03a6dc3f75996a2e90f609d6ae649120477
 ```
 
-[Pacote portátil 0.8](https://github.com/pensamentoracional/open-in-google/actions/runs/36882411612/artifacts/11172180630), ZIP de 52.734.132 bytes, digest `ef8a1f7fe65b959a4b496f3bce509dc385a7ff7f7b96ab057b4d026e47d4acd8`. Backups, sessões e estado permanecem no perfil do usuário, fora do pacote.
+[Pacote portátil 0.8](https://github.com/zagozago/ZagoSheetsWin/actions/runs/36882411612/artifacts/11172180630), ZIP de 52.734.132 bytes, digest `ef8a1f7fe65b959a4b496f3bce509dc385a7ff7f7b96ab057b4d026e47d4acd8`. Backups, sessões e estado permanecem no perfil do usuário, fora do pacote.
 
 A matriz automatizada está aprovada para os cenários simulados e recursos nativos exercitados. Google usa HTTP simulado; DPAPI, handles Windows, registro e compartilhamento SMB foram exercitados no runner. Não houve upload de planilha real nem OAuth com credenciais do usuário. Aceite manual Windows 11/Google/OneDrive reais permanece pendente; não declarar encerramento universal do piloto.

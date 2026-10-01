@@ -11,7 +11,7 @@ Autora original:
 https://github.com/SwatiK425
 
 Fork e evolução:
-https://github.com/pensamentoracional/open-in-google
+https://github.com/zagozago/ZagoSheetsWin
 
 Copyright (c) 2026 Swati K.
 A licença MIT original está preservada apresentada neste instalador e incluída no aplicativo.
