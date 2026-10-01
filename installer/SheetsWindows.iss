@@ -59,4 +59,4 @@ procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
   if CurUninstallStep = usUninstall then MaintainAssociation('--unregister');
 end;
-; No UninstallDelete: state, OAuth, backups, user .url and Google files are never installed here.
+// No UninstallDelete: state, OAuth, backups, user .url and Google files are never installed here.
