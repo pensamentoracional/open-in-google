@@ -1,7 +1,7 @@
 name: Local core
 on:
   push:
-    branches: ['feature/local-core', 'main']
+    branches: ['feature/local-core', 'feature/google-import', 'main']
   pull_request:
 permissions:
   contents: read
@@ -19,7 +19,8 @@ jobs:
         with:
           dotnet-version: '10.0.401'
       - run: dotnet restore SheetsWindows.slnx --locked-mode
-      - run: dotnet test SheetsWindows.slnx --configuration Release --no-restore --logger "trx;LogFileName=local-core.trx"
+      - run: dotnet build SheetsWindows.slnx --configuration Release --no-restore
+      - run: dotnet test SheetsWindows.slnx --configuration Release --no-build --no-restore --logger "trx;LogFileName=local-core.trx"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
