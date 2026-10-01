@@ -149,7 +149,7 @@ public sealed class ReplacementTests
     public void JournalMigratesExistingIntentWithoutLosingEvidence()
     {
         using var f = new Fixture(); var path = Path.Combine(f.Root, "legacy.db");
-        using (var db = new Microsoft.Data.Sqlite.SqliteConnection("Data Source=" + path))
+        using (var db = new Microsoft.Data.Sqlite.SqliteConnection(new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder { DataSource = path, Pooling = false }.ToString()))
         {
             db.Open(); using var cmd = db.CreateCommand(); cmd.CommandText = "CREATE TABLE replacements(id TEXT PRIMARY KEY,path TEXT NOT NULL,url TEXT NOT NULL,step INTEGER NOT NULL); PRAGMA user_version=1; INSERT INTO replacements VALUES($id,$path,$url,3)";
             cmd.Parameters.AddWithValue("$id", f.Op.Id.ToString("N")); cmd.Parameters.AddWithValue("$path", f.Source + ".url"); cmd.Parameters.AddWithValue("$url", f.Url.AbsoluteUri); cmd.ExecuteNonQuery();
