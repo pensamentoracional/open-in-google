@@ -24,15 +24,15 @@ internal sealed class LauncherForm : Form
         defaults.Click += (_, _) => OpenDefaults();
         Shown += async (_, _) =>
         {
-            if (request.Action == LauncherAction.Defaults) { OpenDefaults(); Close(); }
+            if (request.Action == LauncherAction.Defaults) { if (OpenDefaults()) Close(); }
             else if (request.Action != LauncherAction.Home) await RunAsync(request.Action);
         };
         FormClosing += (_, e) => { if (busy) { e.Cancel = true; cancellation.Cancel(); cancel.Enabled = false; } };
     }
-    private void OpenDefaults()
+    private bool OpenDefaults()
     {
-        try { new BrowserLauncher().Open(WindowsAssociationPlan.DefaultsUri); }
-        catch (Exception ex) when (LauncherErrors.Expected(ex)) { status.Text = "Abra Configurações > Aplicativos > Aplicativos padrão e procure Sheets Windows."; }
+        try { new BrowserLauncher().Open(WindowsAssociationPlan.DefaultsUri); return true; }
+        catch (Exception ex) when (LauncherErrors.Expected(ex)) { ExitCode = 1; status.Text = "Abra Configurações > Aplicativos > Aplicativos padrão e procure Sheets Windows."; return false; }
     }
     private async Task RunAsync(LauncherAction action)
     {
