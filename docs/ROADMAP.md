@@ -93,3 +93,7 @@ Fluxo CLI implementado na branch feature/shortcut-replacement: configuração ú
 ## Progresso da etapa 5
 
 Launcher WinExe/WinForms e registro HKCU apenas para XLSX na branch feature/windows-integration. A escolha do padrão acontece na interface oficial do Windows, sem modificar UserChoice. CLI prepara configuração uma vez; launcher executa a substituição completa sem terminal. Pacote portátil win-x64 produzido pelo CI. Ver STAGE_5.md. Instalador/onboarding completo seguem na etapa 6; piloto Explorer + Google real no Windows 11 ainda pendente.
+
+## Progresso da etapa 6
+
+Piloto instalável implementado na branch feature/installable-pilot: Inno Setup por usuário, configuração visual, recuperação offline de snapshots e desinstalação com preservação de dados. O CI verifica instalação/atualização/desinstalação/reinstalação e escolhas de padrão. Ver STAGE_6.md. A implementação não encerra o gate de uso real no Windows 11 com OAuth/Explorer; esse aceite manual permanece pendente antes de ampliar formatos.

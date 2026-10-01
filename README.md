@@ -24,3 +24,7 @@ A evolução pertence ao fork e não depende de PRs aceitos. Correções genéri
 - [Launcher e Abrir com — etapa 5](docs/STAGE_5.md)
 
 O MVP será XLSX em pasta local não sincronizada, com OAuth, snapshot, backup, journal, lock, conversão verificada e atalho .url. ODS, XLS, CSV, TSV, OneDrive e rede são entregas posteriores. Não há sincronização bidirecional. O backup guarda os bytes da importação inicial, não edições online futuras.
+
+### Piloto instalável — fase 6
+
+A branch `feature/installable-pilot` produz o instalador por usuário **SheetsWindows-Setup-win-x64** no GitHub Actions. Configuração visual, OAuth, escolha do padrão e restauração offline estão no aplicativo. [Guia de instalação e recuperação](docs/STAGE_6.md). A desinstalação conserva backups, configuração, atalhos e documentos Google. O aceite manual completo no Windows 11 com Google real ainda está pendente.

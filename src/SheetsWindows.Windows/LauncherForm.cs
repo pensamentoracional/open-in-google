@@ -14,10 +14,14 @@ internal sealed class LauncherForm : Form
     public int ExitCode { get; private set; }
     public LauncherForm(LauncherRequest request)
     {
-        this.request = request; Text = "Sheets Windows"; ClientSize = new Size(560, 185); MinimumSize = new Size(500, 220);
+        this.request = request; Text = "Sheets Windows"; ClientSize = new Size(680, 240); MinimumSize = new Size(500, 220);
         StartPosition = FormStartPosition.CenterScreen; AutoScaleMode = AutoScaleMode.Dpi;
         var buttons = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, Padding = new Padding(12), FlowDirection = FlowDirection.LeftToRight };
-        buttons.Controls.AddRange([login, defaults, cancel]); Controls.Add(status); Controls.Add(buttons);
+        var setup = new Button { Text = "Configurar piloto", AutoSize = true };
+        var recovery = new Button { Text = "Restaurar backups", AutoSize = true };
+        setup.Click += (_, _) => { if (!busy) { using var form = new SetupForm(); form.ShowDialog(this); } };
+        recovery.Click += (_, _) => { if (!busy) { using var form = new RecoveryForm(); form.ShowDialog(this); } };
+        buttons.Controls.AddRange([setup, login, defaults, recovery, cancel]); Controls.Add(status); Controls.Add(buttons);
         status.Text = "Abra uma planilha XLSX local pelo Explorer. Após a configuração inicial, ela será convertida para Sheets e substituída por atalho, com backup privado.";
         cancel.Click += (_, _) => { if (busy) { cancellation.Cancel(); cancel.Enabled = false; status.Text = "Interrompendo com segurança…"; } else Close(); };
         login.Click += async (_, _) => await RunAsync(LauncherAction.Login);

@@ -1,7 +1,7 @@
 name: Local core
 on:
   push:
-    branches: ['feature/local-core', 'feature/google-import', 'feature/shortcut-replacement', 'feature/windows-integration', 'main']
+    branches: ['feature/local-core', 'feature/google-import', 'feature/shortcut-replacement', 'feature/windows-integration', 'feature/installable-pilot', 'main']
   pull_request:
 permissions:
   contents: read
@@ -52,3 +52,24 @@ jobs:
         with:
           name: SheetsWindows-win-x64
           path: artifacts/SheetsWindows-win-x64/
+
+      - name: Compile per-user installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $compiler = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (!(Test-Path $compiler)) { throw 'Inno Setup 6 compiler missing from Windows runner' }
+          & $compiler installer/SheetsWindows.iss
+          if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed' }
+
+      - name: Verify installation, upgrade and preservation on uninstall
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./installer/Test-Lifecycle.ps1
+
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'Windows'
+        with:
+          name: SheetsWindows-Setup-win-x64
+          path: artifacts/installer/SheetsWindows-Setup-win-x64.exe
+          if-no-files-found: error

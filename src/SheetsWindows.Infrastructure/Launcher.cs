@@ -5,11 +5,15 @@ using SheetsWindows.Core;
 
 namespace SheetsWindows.Infrastructure;
 
-public enum LauncherAction { Home, Open, Login, Defaults, Version }
+public enum LauncherAction { Home, Open, Login, Defaults, Version, Setup, Recovery, Register, Unregister }
 public sealed record LauncherRequest(LauncherAction Action, string? Path = null)
 {
     public static LauncherRequest Parse(string[] args)
     {
+        if (args.Length == 1 && args[0] == "--setup") return new(LauncherAction.Setup);
+        if (args.Length == 1 && args[0] == "--recovery") return new(LauncherAction.Recovery);
+        if (args.Length == 1 && args[0] == "--register") return new(LauncherAction.Register);
+        if (args.Length == 1 && args[0] == "--unregister") return new(LauncherAction.Unregister);
         if (args.Length == 0) return new(LauncherAction.Home);
         if (args.Length == 1 && args[0] == "--version") return new(LauncherAction.Version);
         if (args.Length == 1 && args[0] == "--login") return new(LauncherAction.Login);
@@ -59,7 +63,7 @@ public static class LauncherErrors
         or Microsoft.Data.Sqlite.SqliteException or System.Text.Json.JsonException or System.Xml.XmlException or KeyNotFoundException or SecurityException;
     public static string Message(Exception ex) => ex switch
     {
-        LauncherNotConfiguredException => "Conclua a configuração do piloto antes de abrir planilhas. Consulte o guia da fase 5.",
+        LauncherNotConfiguredException => "Conclua a configuração do piloto antes de abrir planilhas. Abra o Sheets Windows e clique em Configurar piloto.",
         AuthorizationRequiredException => "O Google precisa de autorização. Abra o Sheets Windows e clique em Autorizar Google; depois abra a planilha novamente.",
         ReconciliationRequiredException => "A importação aguarda reconciliação. Não repita o upload manualmente. Consulte o guia de recuperação.",
         LocalConflictException => "O arquivo ou sua associação mudou. A substituição foi interrompida para conservar as versões existentes.",
