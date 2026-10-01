@@ -33,6 +33,7 @@ public sealed class GoogleTests
         public byte[]? ExportOverride; public int Exports; public bool ExportUnauthorizedOnce;
         public readonly Dictionary<string, byte[]> Uploaded = []; public readonly List<string> MediaTypes = [];
         private readonly Dictionary<string, (string Id, object File, string Mime, MemoryStream Bytes)> sessions = [];
+        public bool Offline, DisconnectOnLoss;
         public int Posts; public bool LoseSheetResponse, LoseFolderResponse, ListLag, DuplicateList, WrongMime, Trashed, DenyEdit, Get401;
         public readonly Dictionary<string, object> Files = [];
         public readonly List<string> Methods = [];
@@ -63,6 +64,7 @@ public sealed class GoogleTests
             }
             if (req.Method == HttpMethod.Put && path == "/upload/drive/v3/files")
             {
+                if (Offline) throw new HttpRequestException("Simulated disconnection");
                 var id = req.RequestUri.Query.Split("upload_id=")[1]; var session = sessions[id];
                 var range = req.Content!.Headers.ContentRange!;
                 if (range.From is not null)
@@ -74,7 +76,7 @@ public sealed class GoogleTests
                 {
                     Files[id] = session.File;
                     if (!Uploaded.ContainsKey(id)) { Uploaded[id] = session.Bytes.ToArray(); MediaTypes.Add(session.Mime); }
-                    if (LoseSheetResponse) { LoseSheetResponse = false; throw new HttpRequestException("Lost completion response"); }
+                    if (LoseSheetResponse) { LoseSheetResponse = false; Offline = DisconnectOnLoss; throw new HttpRequestException("Lost completion response"); }
                     return Json(new { id });
                 }
                 var response = new HttpResponseMessage((HttpStatusCode)308);
@@ -195,19 +197,21 @@ public sealed class GoogleTests
     {
         using var w = new Workspace(); File.WriteAllBytes(w.Source, Workbook()); ConfigureLauncher(w, out var storage);
         var share = "SheetsWindowsTest_" + Guid.NewGuid().ToString("N"); var script = Path.Combine(w.Root, "share.ps1");
-        File.WriteAllText(script, "param($Action,$Name,$Root)\n$ErrorActionPreference='Stop'\nif ($Action -eq 'create') { New-SmbShare -Name $Name -Path $Root -ReadAccess ([Security.Principal.WindowsIdentity]::GetCurrent().Name) | Out-Null } else { Remove-SmbShare -Name $Name -Force -ErrorAction Stop }");
+        File.WriteAllText(script, "param($Action,$Name,$Root)\n$ErrorActionPreference='Stop'\nif ($Action -eq 'create') { New-SmbShare -Name $Name -Path $Root -ReadAccess ([Security.Principal.WindowsIdentity]::GetCurrent().Name) | Out-Null } else { if (Get-SmbShare -Name $Name -ErrorAction SilentlyContinue) { Remove-SmbShare -Name $Name -Force -ErrorAction Stop } }");
         async Task Share(string action)
         {
             var start = new System.Diagnostics.ProcessStartInfo("powershell.exe") { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
             foreach (var argument in new[] { "-NoProfile", "-NonInteractive", "-File", script, action, share, w.Root }) start.ArgumentList.Add(argument);
-            using var process = System.Diagnostics.Process.Start(start)!; using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            using var process = System.Diagnostics.Process.Start(start)!; using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(90));
             var output = process.StandardOutput.ReadToEndAsync(timeout.Token); var errors = process.StandardError.ReadToEndAsync(timeout.Token);
-            await process.WaitForExitAsync(timeout.Token); await output; var error = await errors;
+            try { await process.WaitForExitAsync(timeout.Token); }
+            catch (OperationCanceledException) { if (!process.HasExited) process.Kill(entireProcessTree: true); throw; }
+            await output; var error = await errors;
             Assert.True(process.ExitCode == 0, "Disposable SMB setup/cleanup failed: " + error);
         }
-        await Share("create");
         try
         {
+            await Share("create");
             var unc = @"\\localhost\" + share + "\\" + Path.GetFileName(w.Source);
             using var server = new DriveServer(); using var http = new HttpClient(server); var launcher = new WindowsLauncher(storage, http, new LauncherBrowser());
             await Assert.ThrowsAsync<NotSupportedException>(() => launcher.OpenAsync(unc)); Assert.Equal(0, server.Posts);
@@ -216,6 +220,18 @@ public sealed class GoogleTests
             Assert.StartsWith("network:", Assert.Single(w.Registry().Pending()).SourceKey);
         }
         finally { await Share("remove"); }
+    }
+    [WindowsFact]
+    public async Task LauncherRestartRecoversLostUploadCompletionFromProtectedSession()
+    {
+        using var w = new Workspace(); var original = Workbook(); File.WriteAllBytes(w.Source, original); ConfigureLauncher(w, out var storage);
+        using var server = new DriveServer { LoseSheetResponse = true, DisconnectOnLoss = true }; using var http = new HttpClient(server); var browser = new LauncherBrowser();
+        await Assert.ThrowsAsync<HttpRequestException>(() => new WindowsLauncher(storage, http, browser).OpenAsync(w.Source));
+        Assert.True(File.Exists(w.Source)); Assert.Empty(browser.Opened); var operation = Assert.Single(w.Registry().Pending());
+        Assert.False(new GoogleRemoteRegistry(Path.Combine(storage.Root, "google.db")).Get("sheet:" + operation.Id.ToString("N"))!.Verified);
+        Assert.Single(Directory.GetFiles(Path.Combine(storage.Root, "uploads"), "*.session")); server.Offline = false;
+        var shortcut = await new WindowsLauncher(storage, http, browser).ResumeAsync(operation.Id, true);
+        Assert.False(File.Exists(w.Source)); Assert.True(File.Exists(shortcut)); Assert.Equal(2, server.Posts); Assert.Equal(original, File.ReadAllBytes(operation.Snapshot!.BackupPath));
     }
     [WindowsFact]
     public async Task RecoveryByIdCompletesBrowserFailureWithoutUploadingAgain()
