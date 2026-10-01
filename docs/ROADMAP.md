@@ -85,3 +85,7 @@ SQLite é a proposta para associações e journal por oferecer transações e co
 Formalizar a auditoria e as decisões; preparar fork; criar núcleo e testes sem Google real; implementar OAuth/importação; completar transação de atalho; validar no Windows 11; entregar instalador piloto XLSX. Expandir formatos apenas depois desse fluxo passar pelos testes de falha.
 
 Não estimar datas antes de validar o primeiro fluxo no Windows e as restrições reais de conversão. Separar commits de correções genéricas (OAuth, paginação, literal paths, persistência, documentação) das funcionalidades específicas do fork.
+
+## Progresso da etapa 4
+
+Fluxo CLI implementado na branch feature/shortcut-replacement: configuração única de pasta particular não sincronizada, .url atômico sem sobrescrita, retirada por handle Windows, journal e retomada/restauração por ID. Ver STAGE_4.md para limites e evidências. Integração do duplo clique e configuração visual continuam nas etapas 5/6. O aceite manual no Windows 11 com Google real ainda é gate do piloto.

@@ -44,3 +44,7 @@ Publicação realizada via plugin GitHub na branch docs/foundation após liberar
 ## Compilar e testar o núcleo
 
 Instalar SDK .NET 10.0.401 (global.json). Executar `dotnet restore SheetsWindows.slnx --locked-mode` e `dotnet test SheetsWindows.slnx --configuration Release --no-restore`. A solução não executa os scripts PowerShell herdados nem realiza chamadas Google. Ver detalhes em STAGE_2.md.
+
+## Etapa 4
+
+Branch feature/shortcut-replacement deriva de feature/google-import. Fluxo CLI, configuração de pasta local e recuperação em STAGE_4.md. Main não foi alterada.
