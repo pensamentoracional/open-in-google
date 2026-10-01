@@ -40,3 +40,7 @@ Comparar com a base auditada, revisar alterações e escolher merge/rebase/cherr
 Escolher versão suportada de .NET e SDKs verificando documentação oficial; preparar execução de testes no Windows 11; validar restauração de backups; especificar fidelidade XLSX e reconciliação de criação remota. Não instalar/rodar os scripts upstream como produto seguro. Nenhum teste de comportamento Windows/Drive foi executado nesta etapa.
 
 Publicação realizada via plugin GitHub na branch docs/foundation após liberar o fork na instalação. Main permanece na revisão upstream. O histórico dos commits locais está preservado no pacote Git entregue; a publicação via API consolida a documentação em um commit derivado da base upstream.
+
+## Compilar e testar o núcleo
+
+Instalar SDK .NET 10.0.401 (global.json). Executar `dotnet restore SheetsWindows.slnx --locked-mode` e `dotnet test SheetsWindows.slnx --configuration Release --no-restore`. A solução não executa os scripts PowerShell herdados nem realiza chamadas Google. Ver detalhes em STAGE_2.md.
