@@ -16,3 +16,7 @@ Data: 2026-10-01. Decisões aceitas para o design; detalhes de runtime/SDK e int
 | 010 | Registrar candidato a app padrão por usuário | Alterar UserChoice silenciosamente viola fluxo oficial | Usuário escolhe padrão na configuração inicial |
 
 Não haverá atualização remota silenciosa, sincronização bidirecional ou exclusão de documentos Google na desinstalação. Fidelidade de conversão é gate adicional; remoto existir não prova conteúdo equivalente.
+
+## ADR 011 — Instalador por usuário e estado separado
+
+Fase 6: Inno Setup para instalar o pacote self-contained em `%LOCALAPPDATA%\Programs\SheetsWindows`; o estado permanece em `%LOCALAPPDATA%\SheetsWindows`. Evita implementar um instalador próprio e permite desinstalar o programa sem incluir dados no manifesto de remoção. O instalador invoca manutenção idempotente de associação, bloqueia destinos arbitrários e preserva conflitos de propriedade. Configuração e recuperação são UI nativa; recuperação offline não depende de OAuth. Gate manual no Windows 11 permanece obrigatório.

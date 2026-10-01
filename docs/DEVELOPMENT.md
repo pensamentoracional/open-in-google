@@ -52,3 +52,7 @@ Branch feature/shortcut-replacement deriva de feature/google-import. Fluxo CLI, 
 ## Etapa 5
 
 Branch feature/windows-integration deriva da fase 4. Novo projeto WinForms net10.0-windows com EnableWindowsTargeting para compilar também no Linux. Publish Windows self-contained win-x64 pelo CI; instruções de registro e piloto em STAGE_5.md. O runtime de UI não é executado no Linux.
+
+## Etapa 6
+
+Branch feature/installable-pilot deriva da fase 5. `--setup`, `--recovery`, `--register` e `--unregister` são entradas explícitas do executável. A manutenção usa o lock de registro e não lê bancos/OAuth. `installer/SheetsWindows.iss` empacota a publicação self-contained com Inno Setup 6; o CI Windows compila e valida o ciclo completo em um perfil descartável com `installer/Test-Lifecycle.ps1`. Não executar esse teste contra uma instalação pessoal. Guia de uso: STAGE_6.md.
