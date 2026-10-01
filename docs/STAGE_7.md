@@ -59,3 +59,14 @@ Continuam pendentes: aceite manual Windows 11 + Google real; arquivos Cloud File
 - Microsoft: [reparse tags](https://learn.microsoft.com/en-us/windows/win32/fileio/reparse-point-tags).
 
 Após a primeira abertura do registro nesta versão, seu schema passa a 2. Executáveis antigos recusam o schema novo; não fazer downgrade da instalação usando o mesmo estado. Isso evita que versões anteriores interpretem operações de formatos que desconhecem.
+
+## Evidências da entrega
+
+Código validado: `73a2720e37c462bbc35e828fa05a5149fb62b542`. [Workflow 36875411056](https://github.com/pensamentoracional/open-in-google/actions/runs/36875411056), 2026-10-01; ambos jobs aprovados.
+
+- Windows: **143 aprovados, 1 ignorado por plataforma, 0 falhas**; 144 casos totais. Inclui SMB local real somente leitura, todos os novos fluxos com DPAPI/handles e HTTP Google simulado, migração e proteção dos originais.
+- Linux: **121 aprovados, 23 ignorados por plataforma/CI, 0 falhas**; mesmos 144 casos.
+- Pacote self-contained verificado com ExcelDataReader e licença; instalador Inno Setup compilado e ciclo instalação/atualização/desinstalação/reinstalação aprovado, preservando estado, novos ajustes, tokens, snapshots, atalhos e padrões dos cinco formatos.
+- [Baixar instalador 0.7](https://github.com/pensamentoracional/open-in-google/actions/runs/36875411056/artifacts/11168732158): ZIP **SheetsWindows-Setup-win-x64**, 37.727.226 bytes; SHA-256 `44d19370c73e29ea049407438258ad44dcdac3caeed48ac3c4626e1abeef36da`. Extrair e executar o EXE interno. Retenção até 2026-12-30, sujeita ao GitHub.
+
+Main e upstream não foram alterados. Esta execução não constitui teste com Google/OneDrive reais nem certificação de retirada de XLS ou arquivos compartilhados.
