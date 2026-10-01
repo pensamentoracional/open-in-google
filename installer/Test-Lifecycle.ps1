@@ -15,8 +15,16 @@ function Defaults-Snapshot {
     $choice = if (Test-Path $choiceKey) { (Get-ItemProperty $choiceKey | Select-Object ProgId, Hash) | ConvertTo-Json -Compress } else { '<absent>' }
     @("default:$default", "choice:$choice")
 }
+function Current-Uninstaller {
+    $key = 'HKCU:/Software/Microsoft/Windows/CurrentVersion/Uninstall/{D970FA65-0364-4F10-A6AA-D4302F31B607}_is1'
+    $command = (Get-ItemProperty $key).UninstallString
+    $path = $command.Trim('"')
+    if ([IO.Path]::GetDirectoryName($path) -ne $installed -or [IO.Path]::GetFileName($path) -notmatch '^unins[0-9]+\.exe$' -or !(Test-Path $path)) { throw 'Unexpected uninstall command' }
+    return $path
+}
 $before = Defaults-Snapshot
 $setup = (Resolve-Path 'artifacts/installer/SheetsWindows-Setup-win-x64.exe').Path
+Write-Host 'Running installer'
 Run-Checked $setup '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART'
 $exe = Join-Path $installed 'SheetsWindows.exe'
 if (!(Test-Path $exe)) { throw 'Executable not installed' }
@@ -29,14 +37,18 @@ foreach ($name in $sentinels) { [IO.File]::WriteAllText((Join-Path $state $name)
 $shortcut = Join-Path $env:RUNNER_TEMP 'preserved.url'
 [IO.File]::WriteAllText($shortcut, "[InternetShortcut]`r`nURL=https://docs.google.com/spreadsheets/d/test/edit`r`n")
 $shortcutBefore = [IO.File]::ReadAllText($shortcut)
+Write-Host 'Running installer'
 Run-Checked $setup '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART'
-Run-Checked (Join-Path $installed 'unins000.exe') '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART'
+Write-Host 'Running registered uninstaller'
+Run-Checked (Current-Uninstaller) '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART'
 if (Test-Path $exe) { throw 'Installed executable remains' }
 if (Test-Path 'HKCU:/Software/SheetsWindows/Integration') { throw 'Owned registration remains' }
 foreach ($name in $sentinels) { if ([IO.File]::ReadAllText((Join-Path $state $name)) -ne "preserve:$name") { throw "Data changed: $name" } }
 if ([IO.File]::ReadAllText($shortcut) -ne $shortcutBefore) { throw 'Shortcut changed' }
 if (Compare-Object $before (Defaults-Snapshot)) { throw 'Windows defaults changed' }
 # Reinstall and remove again demonstrates retained state does not block maintenance.
+Write-Host 'Running installer'
 Run-Checked $setup '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART'
-Run-Checked (Join-Path $installed 'unins000.exe') '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART'
+Write-Host 'Running registered uninstaller'
+Run-Checked (Current-Uninstaller) '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART'
 Write-Host 'Per-user install, upgrade, uninstall and reinstall passed; backups, state, shortcut and Windows defaults preserved.'
