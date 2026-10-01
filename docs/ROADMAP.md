@@ -89,3 +89,7 @@ Não estimar datas antes de validar o primeiro fluxo no Windows e as restriçõe
 ## Progresso da etapa 4
 
 Fluxo CLI implementado na branch feature/shortcut-replacement: configuração única de pasta particular não sincronizada, .url atômico sem sobrescrita, retirada por handle Windows, journal e retomada/restauração por ID. Ver STAGE_4.md para limites e evidências. Integração do duplo clique e configuração visual continuam nas etapas 5/6. O aceite manual no Windows 11 com Google real ainda é gate do piloto.
+
+## Progresso da etapa 5
+
+Launcher WinExe/WinForms e registro HKCU apenas para XLSX na branch feature/windows-integration. A escolha do padrão acontece na interface oficial do Windows, sem modificar UserChoice. CLI prepara configuração uma vez; launcher executa a substituição completa sem terminal. Pacote portátil win-x64 produzido pelo CI. Ver STAGE_5.md. Instalador/onboarding completo seguem na etapa 6; piloto Explorer + Google real no Windows 11 ainda pendente.

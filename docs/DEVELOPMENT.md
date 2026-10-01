@@ -48,3 +48,7 @@ Instalar SDK .NET 10.0.401 (global.json). Executar `dotnet restore SheetsWindows
 ## Etapa 4
 
 Branch feature/shortcut-replacement deriva de feature/google-import. Fluxo CLI, configuração de pasta local e recuperação em STAGE_4.md. Main não foi alterada.
+
+## Etapa 5
+
+Branch feature/windows-integration deriva da fase 4. Novo projeto WinForms net10.0-windows com EnableWindowsTargeting para compilar também no Linux. Publish Windows self-contained win-x64 pelo CI; instruções de registro e piloto em STAGE_5.md. O runtime de UI não é executado no Linux.
