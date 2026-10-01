@@ -7,5 +7,6 @@
     <AssemblyName>SheetsWindows</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
+  <ItemGroup><None Include="../../LICENSE" Link="LICENSE" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"/></ItemGroup>
   <ItemGroup><ProjectReference Include="../SheetsWindows.Infrastructure/SheetsWindows.Infrastructure.csproj"/></ItemGroup>
 </Project>

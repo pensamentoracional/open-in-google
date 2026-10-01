@@ -64,7 +64,13 @@ Testes portáveis: parser, opções, rejeição de caminhos relativos/URLs/múlt
 
 O CI compila também o projeto WinForms no Linux com EnableWindowsTargeting, mas não executa sua interface nesse ambiente. Windows publica o pacote self-contained win-x64, verifica runtime, SQLite e subsistema PE de GUI e executa --version antes de disponibilizar artifact. O CI não escolhe um app padrão real e não simula cliques no Explorer ou avalia layout visual da janela. O piloto no Windows 11 com configuração, Explorer, Google real e fidelidade de conversão continua pendente; não confundir testes simulados com esse aceite.
 
-Evidências de compilação, testes e pacote serão registradas após CI.
+Compilação local Release sem avisos ou erros; restore --locked-mode aprovado. Local/Linux: 85 aprovados / 17 testes Windows pulados, zero falhas, em 102 testes. CI final aprovado no run 36856500458, commit de código eeb60547102e68ecc26d609409bde1eb3db988ce: Windows 101 aprovados / 1 teste Unix pulado; Linux 85 aprovados / 17 testes Windows pulados; zero falhas. O pacote inclui LICENSE com atribuição MIT original. Publish win-x64, verificação das dependências/subsistema de GUI e execução de --version aprovados.
+
+- CI: https://github.com/pensamentoracional/open-in-google/actions/runs/36856500458
+- Pacote aprovado: https://github.com/pensamentoracional/open-in-google/actions/runs/36856500458/artifacts/11158608409
+- Artifact SheetsWindows-win-x64, ZIP de 52.594.569 bytes, SHA-256 e70721fe2e34762a5cd5582c2c1f187adaf4999634c9a68f141d7f5077956d69. Retenção indicada pelo GitHub até 2026-12-30; futuras execuções geram novos artifacts.
+
+O pacote não contém credenciais, tokens ou arquivos de usuário. Não houve instalação ou mudança de padrão no computador de Fernando. Interface visual, escolha real de app padrão, duplo clique no Explorer e Google real permanecem verificações manuais do piloto.
 
 ## Fontes oficiais
 
