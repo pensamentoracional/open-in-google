@@ -35,7 +35,7 @@ public sealed class GoogleImport(LocalPreparation preparation, IOperationRegistr
         {
             var known = await EnsureAsync(sheetKey, access.AccountId, "sheet", snapshot.Sha256,
                 _ => throw new ReconciliationRequiredException(), ct);
-            return new ImportReceipt(op, GoogleDriveClient.Editor(known));
+            return new ImportReceipt(op, GoogleDriveClient.Editor(known), source.Source.Path);
         }
         var folderKey = "folder:" + access.AccountId;
         string folder;
@@ -43,7 +43,7 @@ public sealed class GoogleImport(LocalPreparation preparation, IOperationRegistr
             folder = await EnsureAsync(folderKey, access.AccountId, "folder", "", a => drive.CreateAsync(a, "Sheets Windows", null, null, ct), ct);
         var id = await EnsureAsync(sheetKey, access.AccountId, "sheet", snapshot.Sha256,
             a => drive.CreateAsync(a, Path.GetFileNameWithoutExtension(path), folder, bytes, ct), ct);
-        return new ImportReceipt(op, GoogleDriveClient.Editor(id));
+        return new ImportReceipt(op, GoogleDriveClient.Editor(id), source.Source.Path);
     }
     private async Task<string> EnsureAsync(string key, string account, string kind, string hash, Func<RemoteAttempt, Task<string>> create, CancellationToken ct)
     {

@@ -137,6 +137,26 @@ public sealed class ReplacementTests
         Assert.Throws<InvalidOperationException>(() => f.Journal.Advance(f.Op.Id, 1, 2)); Assert.Equal(0, f.Journal.Get(f.Op.Id)!.Step);
     }
     [WindowsFact]
+    public async Task RenamedSourcePublishesShortcutInCurrentDirectory()
+    {
+        using var f = new Fixture(); var folder = Path.Combine(f.Root, "renamed"); Directory.CreateDirectory(folder); var path = Path.Combine(folder, "Novo nome.xlsx");
+        File.Move(f.Source, path);
+        var shortcut = await f.Coordinator(new WindowsRetirementReader(f.Root)).ReplaceAsync(new(f.Op, f.Url, path));
+        Assert.Equal(Path.ChangeExtension(path, ".url"), shortcut); Assert.False(File.Exists(path)); Assert.False(File.Exists(Path.ChangeExtension(f.Source, ".url")));
+        Assert.Equal(path, f.Journal.Get(f.Op.Id)!.SourcePath);
+    }
+    [Fact]
+    public void JournalMigratesExistingIntentWithoutLosingEvidence()
+    {
+        using var f = new Fixture(); var path = Path.Combine(f.Root, "legacy.db");
+        using (var db = new Microsoft.Data.Sqlite.SqliteConnection("Data Source=" + path))
+        {
+            db.Open(); using var cmd = db.CreateCommand(); cmd.CommandText = "CREATE TABLE replacements(id TEXT PRIMARY KEY,path TEXT NOT NULL,url TEXT NOT NULL,step INTEGER NOT NULL); PRAGMA user_version=1; INSERT INTO replacements VALUES($id,$path,$url,3)";
+            cmd.Parameters.AddWithValue("$id", f.Op.Id.ToString("N")); cmd.Parameters.AddWithValue("$path", f.Source + ".url"); cmd.Parameters.AddWithValue("$url", f.Url.AbsoluteUri); cmd.ExecuteNonQuery();
+        }
+        var migrated = new ReplacementJournal(path).Get(f.Op.Id)!; Assert.Equal(3, migrated.Step); Assert.Equal(f.Url.AbsoluteUri, migrated.Url); Assert.Null(migrated.SourcePath);
+    }
+    [WindowsFact]
     public async Task NativeHandleRetiresOnlyVerifiedOriginal()
     {
         using var f = new Fixture(); var native = new WindowsRetirementReader(f.Root);

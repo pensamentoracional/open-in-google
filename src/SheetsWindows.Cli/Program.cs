@@ -36,8 +36,9 @@ try
     if (args[0] == "restore")
     {
         var operation = new SqliteOperationRegistry(storage.DatabasePath).Get(Guid.Parse(args[2])) ?? throw new InvalidOperationException("Unknown operation.");
-        await new BackupStore(storage.BackupsPath).RestoreAsync(operation.Id, operation.Snapshot ?? throw new InvalidOperationException("Missing snapshot."), operation.SourcePath);
-        Console.WriteLine("Backup restaurado sem sobrescrever arquivos: " + operation.SourcePath); return 0;
+        var destination = new ReplacementJournal(Path.Combine(storage.Root, "replacement.db")).Get(operation.Id)?.SourcePath ?? operation.SourcePath;
+        await new BackupStore(storage.BackupsPath).RestoreAsync(operation.Id, operation.Snapshot ?? throw new InvalidOperationException("Missing snapshot."), destination);
+        Console.WriteLine("Backup restaurado sem sobrescrever arquivos: " + destination); return 0;
     }
     var preparation = storage.CreatePreparation(); var locks = new FileOperationLock(storage.LocksPath);
     using var handler = new HttpClientHandler { AllowAutoRedirect = false }; using var http = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(90) };
@@ -64,7 +65,7 @@ try
             var file = await new GoogleDriveClient(http, auth).GetAsync(access.AccountId, mapping.FileId, CancellationToken.None);
             if (file.Trashed || !file.CanEdit || file.MimeType != GoogleDriveClient.SheetMime || !file.Properties.TryGetValue("sw_operation", out var marker) || marker != mapping.Marker
                 || !file.Properties.TryGetValue("sw_hash", out var hash) || hash != mapping.Hash) throw new InvalidOperationException("Remote association changed.");
-            receipt = new ImportReceipt(operation, GoogleDriveClient.Editor(mapping.FileId));
+            receipt = new ImportReceipt(operation, GoogleDriveClient.Editor(mapping.FileId), new ReplacementJournal(Path.Combine(storage.Root, "replacement.db")).Get(operation.Id)?.SourcePath ?? operation.SourcePath);
         }
         Console.WriteLine("Operação: " + receipt.Operation.Id);
         var replacement = new ReplacementCoordinator(new SqliteOperationRegistry(storage.DatabasePath), new GoogleRemoteRegistry(Path.Combine(storage.Root, "google.db")),

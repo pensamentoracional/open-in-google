@@ -4,7 +4,7 @@ A branch feature/shortcut-replacement acrescenta o fluxo CLI de substituição. 
 
 ## Comportamento
 
-ImportReceipt liga operação local, snapshot e URL à associação Google verificada. Após a importação, o coordenador adquire o lock da identidade e relê a associação local/remota. Confere backup e conserva seu handle aberto, protegido contra escrita e retirada no Windows. Publica `.url` UTF-8 com apenas `[InternetShortcut]` e URL HTTPS canônica do editor Sheets. Não aceita query, fragmento, credenciais, outro host ou ID inválido.
+ImportReceipt liga operação local, caminho atual, snapshot e URL à associação Google verificada. Após a importação, o coordenador adquire o lock da identidade e relê a associação local/remota. Confere backup e conserva seu handle aberto, protegido contra escrita e retirada no Windows. Publica `.url` UTF-8 com apenas `[InternetShortcut]` e URL HTTPS canônica do editor Sheets. Não aceita query, fragmento, credenciais, outro host ou ID inválido.
 
 O nome é primeiro `nome.url`, depois `nome.xlsx.url`, depois `nome.xlsx.<operation-id>.url`. Nunca sobrescreve arquivos ou diretórios existentes. A publicação grava temporário na mesma pasta, flush para disco e move sem overwrite. Na retomada, conteúdo existente precisa ser idêntico ao esperado; um atalho divergente bloqueia a retirada. O atalho fica aberto sem compartilhar escrita/exclusão durante a operação.
 
@@ -14,7 +14,7 @@ Backups privados conservam os bytes importados e não são expurgados automatica
 
 ## Journal e retomada
 
-replacement.db separado, versionado, synchronous=FULL, com transições e códigos de falha sem tokens. Não há transação única entre os três bancos, Google e filesystem.
+replacement.db separado, schema 2 com migração transacional de intenções do schema 1, synchronous=FULL, com transições e códigos de falha sem tokens. Não há transação única entre os três bancos, Google e filesystem.
 
 | Passo | Evidência persistente | Retomada |
 |---|---|---|
@@ -24,7 +24,7 @@ replacement.db separado, versionado, synchronous=FULL, com transições e códig
 | 3 | Retirada autorizada com backup/atalho/associação | Se original ainda existe, conferir sua identidade antes de retirar; se ausente, concluir |
 | 4 | Concluído | Verificar backup/atalho e retornar; nunca tocar em original recriado |
 
-Falhas do browser não avançam o passo 1. Um crash entre abertura do browser e seu registro pode abrir uma segunda aba na retomada, mas não provoca novo upload. Um original ausente antes do passo 3 exige investigação. Um original alterado ou recriado no passo 3 é preservado. Não apagar a planilha Google como rollback. Cópias temporárias órfãs de publicação podem permanecer após encerramento abrupto; não são consideradas atalhos válidos.
+Falhas do browser não avançam o passo 1. Um crash entre abertura do browser e seu registro pode abrir uma segunda aba na retomada, mas não provoca novo upload. Um original ausente antes do passo 3 exige investigação. Um original alterado ou recriado no passo 3 é preservado. Um arquivo renomeado antes de iniciar a substituição mantém sua identidade e publica o atalho no caminho atual; a intenção guarda esse caminho também para resume/restore. A retomada usa o caminho persistido e as regras de ausência acima; não procura arquivos movidos nem adota outro caminho silenciosamente. Atalho movido/divergente bloqueia a retirada. Não apagar a planilha Google como rollback. Cópias temporárias órfãs de publicação podem permanecer após encerramento abrupto; não são consideradas atalhos válidos.
 
 A recuperação é explícita pelo ID, exibido antes da substituição; listagem e recuperação automática na inicialização serão integração posterior. `resume` consulta novamente o remoto e exige a mesma conta. Não chama upload. Os testes exercitam estados persistidos de interrupção; não são um simulador de queda de energia em cada instrução do kernel.
 
@@ -52,4 +52,4 @@ Abrir o `.url` no Explorer usa diretamente o navegador: não chama o CLI e faz z
 - https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-setfileinformationbyhandle
 - https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew
 
-Testes cobrem URL, colisões, backup corrompido, original alterado, navegador recusado, atalho adulterado, concorrência, restauração sem overwrite, journal fora de ordem e retomada de cada estado. Windows acrescenta retirada real pelo handle, exclusão de escrita/rename, limite da pasta e arquivo recriado com os mesmos bytes. Login/conversão Google reais e piloto no Windows 11 continuam pendentes. Compilação local Release sem avisos/erros; 71 testes aprovados, 8 específicos de Windows pulados, zero falhas (79 testes). Evidência CI será registrada após execução.
+Testes cobrem URL, colisões, backup corrompido, original alterado, navegador recusado, atalho adulterado, concorrência, restauração sem overwrite, journal fora de ordem e retomada de cada estado. Windows acrescenta retirada real pelo handle, exclusão de escrita/rename, limite da pasta e arquivo recriado com os mesmos bytes. Login/conversão Google reais e piloto no Windows 11 continuam pendentes. Compilação local Release sem avisos/erros; 72 testes aprovados, 9 específicos de Windows pulados, zero falhas (81 testes). Evidência CI será registrada após execução.

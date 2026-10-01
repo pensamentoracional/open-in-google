@@ -6,8 +6,8 @@ using SheetsWindows.Core;
 
 namespace SheetsWindows.Infrastructure;
 
-public sealed record ImportReceipt(ImportOperation Operation, Uri Url);
-public sealed record ReplacementRecord(Guid OperationId, string ShortcutPath, string Url, int Step);
+public sealed record ImportReceipt(ImportOperation Operation, Uri Url, string? SourcePath = null);
+public sealed record ReplacementRecord(Guid OperationId, string ShortcutPath, string Url, int Step, string? SourcePath = null);
 public interface IRetirementLease : ISourceLease { void Retire(); }
 public interface IRetirementReader { IRetirementLease Open(string path); }
 public interface IBrowserLauncher { void Open(Uri url); }
@@ -24,11 +24,13 @@ public sealed class ReplacementJournal
     {
         PrivateDirectory.Create(Path.GetDirectoryName(Path.GetFullPath(path))!);
         connection = new SqliteConnectionStringBuilder { DataSource = Path.GetFullPath(path), Pooling = false }.ToString();
-        using var db = Open(); using var cmd = db.CreateCommand();
+        using var db = Open(); using var tx = db.BeginTransaction(deferred: false); using var cmd = db.CreateCommand(); cmd.Transaction = tx;
         cmd.CommandText = "PRAGMA user_version";
-        if (Convert.ToInt32(cmd.ExecuteScalar()) > 1) throw new NotSupportedException("Newer replacement journal.");
-        cmd.CommandText = "CREATE TABLE IF NOT EXISTS replacements(id TEXT PRIMARY KEY,path TEXT NOT NULL,url TEXT NOT NULL,step INTEGER NOT NULL CHECK(step BETWEEN 0 AND 4)); CREATE TABLE IF NOT EXISTS events(seq INTEGER PRIMARY KEY,id TEXT NOT NULL,step INTEGER NOT NULL); CREATE TABLE IF NOT EXISTS failures(seq INTEGER PRIMARY KEY,id TEXT NOT NULL,code TEXT NOT NULL); PRAGMA user_version=1;";
-        cmd.ExecuteNonQuery();
+        var version = Convert.ToInt32(cmd.ExecuteScalar());
+        if (version > 2) throw new NotSupportedException("Newer replacement journal.");
+        if (version == 1) { cmd.CommandText = "ALTER TABLE replacements ADD COLUMN source_path TEXT"; cmd.ExecuteNonQuery(); }
+        cmd.CommandText = "CREATE TABLE IF NOT EXISTS replacements(id TEXT PRIMARY KEY,path TEXT NOT NULL,url TEXT NOT NULL,step INTEGER NOT NULL CHECK(step BETWEEN 0 AND 4),source_path TEXT); CREATE TABLE IF NOT EXISTS events(seq INTEGER PRIMARY KEY,id TEXT NOT NULL,step INTEGER NOT NULL); CREATE TABLE IF NOT EXISTS failures(seq INTEGER PRIMARY KEY,id TEXT NOT NULL,code TEXT NOT NULL); PRAGMA user_version=2;";
+        cmd.ExecuteNonQuery(); tx.Commit();
     }
     private SqliteConnection Open()
     {
@@ -37,13 +39,13 @@ public sealed class ReplacementJournal
     }
     public ReplacementRecord? Get(Guid id)
     {
-        using var db = Open(); using var cmd = db.CreateCommand(); cmd.CommandText = "SELECT path,url,step FROM replacements WHERE id=$id"; cmd.Parameters.AddWithValue("$id", id.ToString("N"));
-        using var r = cmd.ExecuteReader(); return r.Read() ? new(id, r.GetString(0), r.GetString(1), r.GetInt32(2)) : null;
+        using var db = Open(); using var cmd = db.CreateCommand(); cmd.CommandText = "SELECT path,url,step,source_path FROM replacements WHERE id=$id"; cmd.Parameters.AddWithValue("$id", id.ToString("N"));
+        using var r = cmd.ExecuteReader(); return r.Read() ? new(id, r.GetString(0), r.GetString(1), r.GetInt32(2), r.IsDBNull(3) ? null : r.GetString(3)) : null;
     }
-    public ReplacementRecord Begin(Guid id, string path, Uri url)
+    public ReplacementRecord Begin(Guid id, string path, Uri url, string? sourcePath = null)
     {
-        using var db = Open(); using var cmd = db.CreateCommand(); cmd.CommandText = "INSERT INTO replacements VALUES($id,$path,$url,0)";
-        cmd.Parameters.AddWithValue("$id", id.ToString("N")); cmd.Parameters.AddWithValue("$path", path); cmd.Parameters.AddWithValue("$url", url.AbsoluteUri); cmd.ExecuteNonQuery(); return Get(id)!;
+        using var db = Open(); using var cmd = db.CreateCommand(); cmd.CommandText = "INSERT INTO replacements(id,path,url,step,source_path) VALUES($id,$path,$url,0,$source)";
+        cmd.Parameters.AddWithValue("$id", id.ToString("N")); cmd.Parameters.AddWithValue("$path", path); cmd.Parameters.AddWithValue("$url", url.AbsoluteUri); cmd.Parameters.AddWithValue("$source", (object?)sourcePath ?? DBNull.Value); cmd.ExecuteNonQuery(); return Get(id)!;
     }
     public void RecordFailure(Guid id, string code)
     {
@@ -131,8 +133,9 @@ public sealed class ReplacementCoordinator(IOperationRegistry local, IRemoteRegi
         // Keep verified backup protected against mutation until source retirement finishes.
         await using var backup = new FileStream(snapshot.BackupPath, FileMode.Open, FileAccess.Read, FileShare.Read);
         if (backup.Length != snapshot.Length || Convert.ToHexString(await SHA256.HashDataAsync(backup, ct)) != snapshot.Sha256) throw new InvalidDataException("Backup changed.");
-        var record = journal.Get(op.Id) ?? journal.Begin(op.Id, InternetShortcut.Choose(op.SourcePath, op.Id), receipt.Url);
-        if (record.Url != receipt.Url.AbsoluteUri || Path.GetDirectoryName(record.ShortcutPath) != Path.GetDirectoryName(op.SourcePath)) throw new LocalConflictException("Replacement binding changed.");
+        var sourcePath = Path.GetFullPath(receipt.SourcePath ?? op.SourcePath);
+        var record = journal.Get(op.Id) ?? journal.Begin(op.Id, InternetShortcut.Choose(sourcePath, op.Id), receipt.Url, sourcePath);
+        if (record.Url != receipt.Url.AbsoluteUri || (record.SourcePath ?? op.SourcePath) != sourcePath || Path.GetDirectoryName(record.ShortcutPath) != Path.GetDirectoryName(sourcePath)) throw new LocalConflictException("Replacement binding changed.");
         if (record.Step == 0)
         {
             // A crash may leave our complete file before its journal transition; verify exact bytes on resume.
@@ -143,7 +146,7 @@ public sealed class ReplacementCoordinator(IOperationRegistry local, IRemoteRegi
         using var shortcut = InternetShortcut.Hold(record.ShortcutPath, bytes);
         if (record.Step == 4) return record.ShortcutPath; // Never touch a recreated original after completion.
         var sourceExists = true;
-        try { _ = File.GetAttributes(op.SourcePath); }
+        try { _ = File.GetAttributes(sourcePath); }
         catch (FileNotFoundException) { sourceExists = false; }
         catch (DirectoryNotFoundException) { sourceExists = false; }
         if (!sourceExists)
@@ -151,7 +154,7 @@ public sealed class ReplacementCoordinator(IOperationRegistry local, IRemoteRegi
             if (record.Step != 3) throw new LocalConflictException("Original missing before retirement intent.");
             journal.Advance(op.Id, 3, 4); return record.ShortcutPath;
         }
-        await using (var source = sources.Open(op.SourcePath))
+        await using (var source = sources.Open(sourcePath))
         {
             if (source.Source.IdentityKey != op.SourceKey || source.Content.Length != snapshot.Length
                 || Convert.ToHexString(await SHA256.HashDataAsync(source.Content, ct)) != snapshot.Sha256) throw new LocalConflictException("Original changed; retirement blocked.");
