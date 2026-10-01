@@ -140,6 +140,12 @@ public sealed class ReplacementTests
     public async Task NativeHandleRetiresOnlyVerifiedOriginal()
     {
         using var f = new Fixture(); var native = new WindowsRetirementReader(f.Root);
+        f.Browser.OnOpen = () =>
+        {
+            Assert.Throws<IOException>(() => File.WriteAllText(f.Source, "changed"));
+            Assert.Throws<IOException>(() => File.WriteAllText(f.Op.Snapshot!.BackupPath, "changed"));
+            Assert.Throws<IOException>(() => File.WriteAllText(Path.ChangeExtension(f.Source, ".url"), "changed"));
+        };
         var coordinator = f.Coordinator(native); await coordinator.ReplaceAsync(new(f.Op, f.Url)); Assert.False(File.Exists(f.Source)); Assert.True(File.Exists(f.Op.Snapshot!.BackupPath));
     }
     [WindowsFact]
@@ -182,8 +188,8 @@ public sealed class ReplacementTests
     }
     private sealed class FakeBrowser : IBrowserLauncher
     {
-        public bool Fail; public int Count;
-        public void Open(Uri url) { if (Fail) throw new IOException("Browser refused"); Count++; }
+        public bool Fail; public int Count; public Action? OnOpen;
+        public void Open(Uri url) { if (Fail) throw new IOException("Browser refused"); OnOpen?.Invoke(); Count++; }
     }
     // Delete-by-path exists ONLY in this test double; production requires a Windows DELETE handle.
     private sealed class FakeReader : IRetirementReader

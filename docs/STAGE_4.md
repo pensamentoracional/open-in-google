@@ -43,7 +43,7 @@ dotnet run --project src/SheetsWindows.Cli -- resume "C:\seguro\desktop-client.j
 dotnet run --project src/SheetsWindows.Cli -- restore "C:\seguro\desktop-client.json" "GUID-da-operacao"
 ```
 
-Configuração persiste em LOCALAPPDATA/SheetsWindows/replacement-root.txt. Sem ela, `replace` não importa nem retira o arquivo. Não requer confirmação por arquivo. `restore` verifica o backup e nunca sobrescreve destino; não remove atalho ou documento Google. O JSON OAuth ainda é parâmetro comum do CLI, inclusive no restore, mas restauração não acessa Google nem exige tokens.
+Configuração é publicada por temporário com flush e rename sem overwrite, para não adotar configuração parcial após crash. Configuração persiste em LOCALAPPDATA/SheetsWindows/replacement-root.txt. Sem ela, `replace` não importa nem retira o arquivo. Não requer confirmação por arquivo. `restore` verifica o backup e nunca sobrescreve destino; não remove atalho ou documento Google. O JSON OAuth ainda é parâmetro comum do CLI, inclusive no restore, mas restauração não acessa Google nem exige tokens.
 
 Abrir o `.url` no Explorer usa diretamente o navegador: não chama o CLI e faz zero uploads. Editar online, reabrir o atalho e confirmar o mesmo ID são verificações manuais pendentes do piloto real. ACL privada dos backups não protege contra processos maliciosos executados pelo mesmo usuário; proteção dos diretórios de origem contra alterações deliberadas por esse usuário também não é uma fronteira de segurança prometida.
 

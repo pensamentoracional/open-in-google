@@ -12,6 +12,7 @@ public sealed class WindowsRetirementReader(string allowedRoot) : IRetirementRea
     {
         if (!OperatingSystem.IsWindows()) throw new PlatformNotSupportedException("Retirement requires Windows handles.");
         var full = Path.GetFullPath(path); var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(allowedRoot));
+        if (root == Path.TrimEndingDirectorySeparator(Path.GetPathRoot(full)!)) throw new NotSupportedException("Configure a dedicated folder, not an entire drive.");
         if (!full.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) throw new NotSupportedException("Source outside configured local root.");
         if (new DriveInfo(Path.GetPathRoot(full)!).DriveType != DriveType.Fixed) throw new NotSupportedException("Fixed local drive required.");
         foreach (var variable in new[] { "OneDrive", "OneDriveConsumer", "OneDriveCommercial" })
@@ -27,7 +28,7 @@ public sealed class WindowsRetirementReader(string allowedRoot) : IRetirementRea
         try
         {
             if (!GetFileInformationByHandle(handle, out var info)) throw new Win32Exception(Marshal.GetLastWin32Error());
-            if (info.Links != 1 || (info.Attributes & 0x400) != 0) throw new NotSupportedException("Hard links and redirects excluded.");
+            if (info.Links != 1 || (info.Attributes & (0x400 | 0x1000 | 0x40000 | 0x400000)) != 0) throw new NotSupportedException("Hard links and redirects excluded.");
             var key = SourceReader.WindowsKey(handle);
             return new Lease(new FileStream(handle, FileAccess.Read), new SourceDescriptor(key, full, "xlsx"));
         }

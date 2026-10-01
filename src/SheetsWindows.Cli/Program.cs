@@ -22,8 +22,16 @@ try
         storage.CreatePreparation();
         Console.WriteLine("Configuração: esta pasta foi declarada local, particular e sem sincronização. A conversão pode perder recursos do Excel. Após backup e validação, replace retirará o XLSX e manterá um .url; backups privados serão conservados.");
         if (File.Exists(policyPath)) throw new InvalidOperationException("Replacement already configured.");
-        using var policy = new FileStream(policyPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
-        var policyBytes = System.Text.Encoding.UTF8.GetBytes(root); policy.Write(policyBytes); policy.Flush(true); return 0;
+        var temporaryPolicy = policyPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            using (var policy = new FileStream(temporaryPolicy, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            {
+                var policyBytes = System.Text.Encoding.UTF8.GetBytes(root); policy.Write(policyBytes); policy.Flush(true);
+            }
+            File.Move(temporaryPolicy, policyPath, overwrite: false); return 0;
+        }
+        finally { if (File.Exists(temporaryPolicy)) File.Delete(temporaryPolicy); }
     }
     if (args[0] == "restore")
     {
@@ -65,7 +73,7 @@ try
     }
     var url = await importer.ImportAsync(args[2]); Process.Start(new ProcessStartInfo(url.AbsoluteUri) { UseShellExecute = true }); Console.WriteLine(url.AbsoluteUri); return 0;
 }
-catch (Exception ex) when (ex is Win32Exception or InvalidDataException or IOException or InvalidOperationException or NotSupportedException or ArgumentException or System.Net.Http.HttpRequestException or OperationCanceledException or System.Text.Json.JsonException or System.Xml.XmlException or KeyNotFoundException)
+catch (Exception ex) when (ex is Microsoft.Data.Sqlite.SqliteException or UnauthorizedAccessException or Win32Exception or InvalidDataException or IOException or InvalidOperationException or NotSupportedException or ArgumentException or System.Net.Http.HttpRequestException or OperationCanceledException or System.Text.Json.JsonException or System.Xml.XmlException or KeyNotFoundException)
 {
     Console.Error.WriteLine(ex is AuthorizationRequiredException ? "Autentique com o comando login." : ex is ReconciliationRequiredException ? "Resultado pendente de reconciliação. O original permanece preservado." : "A operação não foi concluída. Consulte o journal e o backup privado antes de retomar; não recrie nem remova arquivos manualmente."); return 1;
 }

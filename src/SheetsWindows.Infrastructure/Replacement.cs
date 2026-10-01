@@ -110,7 +110,7 @@ public sealed class ReplacementCoordinator(IOperationRegistry local, IRemoteRegi
     public async Task<string> ReplaceAsync(ImportReceipt receipt, CancellationToken ct = default)
     {
         try { return await RunAsync(receipt, ct); }
-        catch (Exception ex) when (ex is InvalidDataException or IOException or InvalidOperationException or ArgumentException or NotSupportedException or OperationCanceledException or System.ComponentModel.Win32Exception)
+        catch (Exception ex) when (ex is UnauthorizedAccessException or InvalidDataException or IOException or InvalidOperationException or ArgumentException or NotSupportedException or OperationCanceledException or System.ComponentModel.Win32Exception)
         {
             journal.RecordFailure(receipt.Operation.Id, ex is LocalConflictException ? "local_conflict" : ex is OperationCanceledException ? "cancelled" : "replacement_failed");
             throw;
@@ -142,7 +142,11 @@ public sealed class ReplacementCoordinator(IOperationRegistry local, IRemoteRegi
         }
         using var shortcut = InternetShortcut.Hold(record.ShortcutPath, bytes);
         if (record.Step == 4) return record.ShortcutPath; // Never touch a recreated original after completion.
-        if (!File.Exists(op.SourcePath))
+        var sourceExists = true;
+        try { _ = File.GetAttributes(op.SourcePath); }
+        catch (FileNotFoundException) { sourceExists = false; }
+        catch (DirectoryNotFoundException) { sourceExists = false; }
+        if (!sourceExists)
         {
             if (record.Step != 3) throw new LocalConflictException("Original missing before retirement intent.");
             journal.Advance(op.Id, 3, 4); return record.ShortcutPath;
