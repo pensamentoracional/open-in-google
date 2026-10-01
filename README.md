@@ -44,4 +44,4 @@ Usar a branch `feature/robustness`, versão 0.8. [Baixar instalador 0.8 aprovado
 
 ### ZagoSheetsWin — etapa 9
 
-Versão 0.9 na branch `feature/zagosheetswin`. Logos e créditos incorporados ao instalador e às telas; Sobre / MIT identifica Open in Google e Swati K (SwatiK425). O nome novo preserva a instalação/estado anteriores por compatibilidade. [Pacote e roteiro final](docs/STAGE_9.md). A licença MIT original permanece íntegra.
+Versão 0.9 na branch `feature/zagosheetswin`. [Baixar instalador aprovado](https://github.com/pensamentoracional/open-in-google/actions/runs/36923406047/artifacts/11192533884). CI Windows/Linux aprovado, incluindo instalação/atualização/remoção e revisão visual das quatro telas. Logos e créditos incorporados ao instalador e às telas; Sobre / MIT identifica Open in Google e Swati K (SwatiK425). O nome novo preserva a instalação/estado anteriores por compatibilidade. [Pacote e roteiro final](docs/STAGE_9.md). A licença MIT original permanece íntegra.

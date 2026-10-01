@@ -47,4 +47,17 @@ O aceite será registrado após execução real; a implementação pronta não p
 
 ## Validação e pacote
 
-Registrar aqui o commit/run/digest após CI completo Windows/Linux e revisão das prévias nativas. Roteiro real permanece pendente para o fechamento acordado.
+Código aprovado: `190e3521d4c23a4811721caa2d026adf9c4e17a0`. [CI aprovado — run 36923406047](https://github.com/pensamentoracional/open-in-google/actions/runs/36923406047).
+
+- Windows: 170 testes aprovados, zero falhas; 1 ignorado por verificar permissões Unix.
+- Linux: 142 aprovados, zero falhas; 29 específicos de Windows ignorados. Isso não distribui o aplicativo para Linux.
+- Build sem warnings; publicação self-contained x64 e dependências verificadas.
+- Instalação por usuário, atualização, bloqueio de downgrade, remoção e reinstalação aprovados; sentinelas de configuração, backups e atalhos conservadas e padrões do Windows intactos. A fixture 0.7 usa o payload atual para verificar a política de versão; a migração do nome antigo é verificada separadamente pelos testes de registro.
+- Prévias nativas de início, configuração, recuperação e Sobre revisadas visualmente na escala padrão do runner: logo, nome, créditos e controles sem sobreposição. [Baixar prévias](https://github.com/pensamentoracional/open-in-google/actions/runs/36923406047/artifacts/11192178905). DPI 125%/150% e teclado continuam no aceite real.
+- LICENSE original permanece sem alterações.
+
+[**Baixar instalador ZagoSheetsWin 0.9 — Windows x64**](https://github.com/pensamentoracional/open-in-google/actions/runs/36923406047/artifacts/11192533884). O ZIP contém `ZagoSheetsWin-Setup-win-x64.exe`; SHA-256 **do ZIP**: `aaa6e914968c654697e1213dc3fc4588a482a68877f8373b30153bef90c2fc49`. Download de artefatos exige login no GitHub e tem retenção até 30/12/2026.
+
+[Pacote portátil aprovado](https://github.com/pensamentoracional/open-in-google/actions/runs/36923406047/artifacts/11192308801), SHA-256 do ZIP: `7cd4521939636a1968d0f9f35a648ed011c37509f4accf45fedb01a4e62b37f6`.
+
+A consolidação técnica da etapa 9 está concluída. O roteiro real acima permanece pendente para o fechamento acordado; este pacote é o candidato de homologação, não um aceite automático de Google real.
