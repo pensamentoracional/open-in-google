@@ -64,6 +64,34 @@ public sealed class GoogleTests
         auth ??= new FixedAuth(); var http = new HttpClient(server, false) { Timeout = TimeSpan.FromSeconds(10) };
         return new(w.Coordinator(), w.Registry(), registry ?? new GoogleRemoteRegistry(Path.Combine(w.Root, "state", "google.db")), new SourceReader(), new FileOperationLock(w.Locks), auth, new GoogleDriveClient(http, auth));
     }
+    private sealed class LauncherBrowser : IBrowserLauncher
+    {
+        public bool Fail; public List<Uri> Opened { get; } = [];
+        public void Open(Uri uri) { if (Fail) throw new IOException("Browser unavailable"); Opened.Add(uri); }
+    }
+    [WindowsFact]
+    public async Task ExplorerActivationImportsAndRetiresThroughTheComposedLauncher()
+    {
+        using var w = new Workspace(); var bytes = Workbook(); File.WriteAllBytes(w.Source, bytes); using var server = new DriveServer(); using var http = new HttpClient(server);
+        var storage = new LocalStorage(Path.Combine(w.Root, "state")); const string client = "pilot.apps.googleusercontent.com";
+        LauncherConfiguration.SaveClient(storage, "{\"installed\":{\"client_id\":\"" + client + "\"}}"); File.WriteAllText(Path.Combine(storage.Root, "replacement-root.txt"), w.Root);
+        new DpapiTokenVault(Path.Combine(storage.Root, "auth"), client).Save(new(client, client + ":user", "test-token", "test-refresh", DateTimeOffset.UtcNow.AddHours(1)));
+        var browser = new LauncherBrowser(); var shortcut = await new WindowsLauncher(storage, http, browser).OpenAsync(w.Source);
+        Assert.False(File.Exists(w.Source)); Assert.Equal(2, server.Posts); Assert.Single(browser.Opened); Assert.Contains("file_2", File.ReadAllText(shortcut));
+        var operation = Assert.Single(w.Registry().Pending()); Assert.Equal(bytes, File.ReadAllBytes(operation.Snapshot!.BackupPath));
+        Assert.Equal(4, new ReplacementJournal(Path.Combine(storage.Root, "replacement.db")).Get(operation.Id)!.Step);
+    }
+    [WindowsFact]
+    public async Task ExplorerActivationResumesAfterBrowserFailureWithoutNewUpload()
+    {
+        using var w = new Workspace(); File.WriteAllBytes(w.Source, Workbook()); using var server = new DriveServer(); using var http = new HttpClient(server);
+        var storage = new LocalStorage(Path.Combine(w.Root, "state")); const string client = "pilot.apps.googleusercontent.com";
+        LauncherConfiguration.SaveClient(storage, "{\"installed\":{\"client_id\":\"" + client + "\"}}"); File.WriteAllText(Path.Combine(storage.Root, "replacement-root.txt"), w.Root);
+        new DpapiTokenVault(Path.Combine(storage.Root, "auth"), client).Save(new(client, client + ":user", "test-token", "test-refresh", DateTimeOffset.UtcNow.AddHours(1)));
+        var browser = new LauncherBrowser { Fail = true }; var launcher = new WindowsLauncher(storage, http, browser);
+        await Assert.ThrowsAsync<IOException>(() => launcher.OpenAsync(w.Source)); Assert.True(File.Exists(w.Source));
+        browser.Fail = false; await launcher.OpenAsync(w.Source); Assert.Equal(2, server.Posts); Assert.False(File.Exists(w.Source));
+    }
     [Fact]
     public async Task FirstImportVerifiesSheetAndRepeatDoesNotPost()
     {

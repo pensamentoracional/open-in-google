@@ -24,3 +24,6 @@ TestResults/
 *.snapshot
 *.lock
 *.tmp
+
+artifacts/
+launcher-client.json
