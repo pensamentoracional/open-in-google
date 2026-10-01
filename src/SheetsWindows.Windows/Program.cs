@@ -10,7 +10,7 @@ internal static class Program
         try
         {
             var request = LauncherRequest.Parse(args);
-            if (request.Action == LauncherAction.Version) { Console.WriteLine("Sheets Windows pilot 0.7"); return 0; }
+            if (request.Action == LauncherAction.Version) { Console.WriteLine("Sheets Windows pilot 0.8"); return 0; }
             if (request.Action is LauncherAction.Register or LauncherAction.Unregister)
             {
                 var held = new FileOperationLock(LocalStorage.ForCurrentUser().LocksPath).AcquireAsync("windows-registration").AsTask().GetAwaiter().GetResult();

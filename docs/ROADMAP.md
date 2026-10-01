@@ -101,3 +101,7 @@ Piloto instalável implementado na branch feature/installable-pilot: Inno Setup 
 ## Progresso da etapa 7
 
 Branch feature/formats-environments: CSV/TSV com encoding/delimitador estritos, ODS/XLS com MIME e validação próprios, conferência de valores exportados antes da retirada de CSV/TSV/ODS simples, modo de cópia para XLS/ODS complexos/OneDrive/rede e migração preservando registro anterior. Formatos/ambientes sem prova de fidelidade/permissões conservam o original; a retirada nesses casos permanece bloqueada. Ver STAGE_7.md. O aceite manual Windows 11/Google/Cloud Files reais continua pendente; não declarar certificação universal da etapa.
+
+## Progresso da etapa 8
+
+Branch feature/robustness: sessões de upload protegidas e retomáveis, consultas limitadas, recuperação por ID na interface, diagnóstico rotacionado sem conteúdo sensível e atualização explícita com conferência de hash/bloqueio de downgrade. Correção PowerShell genérica em fix/literal-paths, baseada diretamente no upstream original. Ver STAGE_8.md para matriz, evidências e limites. O aceite real Windows 11/Google continua pendente antes de encerrar o piloto.

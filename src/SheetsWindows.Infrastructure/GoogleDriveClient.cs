@@ -8,8 +8,12 @@ using SheetsWindows.Core;
 namespace SheetsWindows.Infrastructure;
 
 public sealed record GoogleFile(string Id, string MimeType, bool Trashed, bool CanEdit, Dictionary<string, string> Properties);
-public sealed class GoogleDriveClient(HttpClient http, IGoogleAuth auth)
+public sealed class GoogleDriveClient(HttpClient http, IGoogleAuth auth, UploadSessionStore? sessions = null)
 {
+    private readonly ResumableUpload? uploads = sessions is null ? null : new(http, auth, sessions);
+    public bool CanResume(RemoteAttempt attempt, byte[] bytes, string mime) => uploads?.HasSession(attempt, bytes, mime) == true;
+    public Task<string> ResumeAsync(RemoteAttempt attempt, byte[] bytes, string mime, CancellationToken ct) =>
+        uploads?.ResumeAsync(attempt, bytes, mime, ct) ?? throw new ReconciliationRequiredException();
     public const string SheetMime = "application/vnd.google-apps.spreadsheet";
     public const string FolderMime = "application/vnd.google-apps.folder";
     public static void ValidateId(string id)
@@ -17,17 +21,31 @@ public sealed class GoogleDriveClient(HttpClient http, IGoogleAuth auth)
     public static Uri Editor(string id) { ValidateId(id); return new Uri($"https://docs.google.com/spreadsheets/d/{id}/edit"); }
     private async Task<JsonDocument> SendAsync(Func<HttpRequestMessage> request, string account, CancellationToken ct)
     {
-        for (var i = 0; i < 2; i++)
+        var refreshed = false; var refresh = false; var retries = 0;
+        for (var i = 0; i < 5; i++)
         {
-            var access = await auth.AccessAsync(i == 1, ct);
+            var access = await auth.AccessAsync(refresh, ct); refresh = false;
             if (access.AccountId != account) throw new InvalidOperationException("Google account changed.");
             using var req = request(); req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", access.Token);
-            using var response = await http.SendAsync(req, ct);
-            if (response.StatusCode == HttpStatusCode.Unauthorized && req.Method == HttpMethod.Get && i == 0) continue;
-            if (!response.IsSuccessStatusCode) throw new GoogleApiException((int)response.StatusCode);
-            using var stream = await response.Content.ReadAsStreamAsync(ct); return await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+            HttpResponseMessage response;
+            try { response = await http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct); }
+            catch (HttpRequestException) when (req.Method == HttpMethod.Get && ++retries <= 3)
+            { await Task.Delay(TimeSpan.FromMilliseconds(200 * retries), ct); continue; }
+            using (response)
+            {
+                if (response.StatusCode == HttpStatusCode.Unauthorized && req.Method == HttpMethod.Get && !refreshed)
+                { refreshed = true; refresh = true; continue; }
+                if (req.Method == HttpMethod.Get && ((int)response.StatusCode == 429 || (int)response.StatusCode >= 500) && ++retries <= 3)
+                { await Task.Delay(TimeSpan.FromMilliseconds(200 * retries), ct); continue; }
+                if (!response.IsSuccessStatusCode) throw new GoogleApiException((int)response.StatusCode);
+                const int max = 1024 * 1024;
+                if (response.Content.Headers.ContentLength > max) throw new InvalidDataException("Google response too large.");
+                await using var stream = await response.Content.ReadAsStreamAsync(ct); using var buffer = new MemoryStream(); var chunk = new byte[81920]; int count;
+                while ((count = await stream.ReadAsync(chunk, ct)) != 0) { if (buffer.Length + count > max) throw new InvalidDataException("Google response too large."); buffer.Write(chunk, 0, count); }
+                return JsonDocument.Parse(buffer.ToArray());
+            }
         }
-        throw new AuthorizationRequiredException();
+        throw new ReconciliationRequiredException();
     }
     private static GoogleFile File(JsonElement e)
     {
@@ -45,7 +63,7 @@ public sealed class GoogleDriveClient(HttpClient http, IGoogleAuth auth)
     }
     public async Task<IReadOnlyList<GoogleFile>> FindAsync(RemoteAttempt attempt, CancellationToken ct)
     {
-        var files = new List<GoogleFile>(); string? page = null;
+        var files = new List<GoogleFile>(); string? page = null; var pages = new HashSet<string>();
         do
         {
             var q = $"appProperties has {{ key='sw_operation' and value='{attempt.Marker}' }} and trashed=false";
@@ -55,6 +73,7 @@ public sealed class GoogleDriveClient(HttpClient http, IGoogleAuth auth)
             foreach (var e in json.RootElement.GetProperty("files").EnumerateArray()) files.Add(File(e));
             if (files.Count > 1) throw new ReconciliationRequiredException();
             page = json.RootElement.TryGetProperty("nextPageToken", out var next) ? next.GetString() : null;
+            if (page is not null && (!pages.Add(page) || pages.Count > 100)) throw new ReconciliationRequiredException();
         } while (page is not null);
         return files;
     }
@@ -93,6 +112,7 @@ public sealed class GoogleDriveClient(HttpClient http, IGoogleAuth auth)
         };
         if (folder is not null) { ValidateId(folder); meta["parents"] = new[] { folder }; }
         var metadata = JsonSerializer.Serialize(meta);
+        if (bytes is not null && uploads is not null) return await uploads.StartAsync(attempt, metadata, bytes, mediaType, ct);
         using var json = await SendAsync(() =>
         {
             var req = new HttpRequestMessage(HttpMethod.Post, bytes is null ? "https://www.googleapis.com/drive/v3/files?fields=id" : "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id");

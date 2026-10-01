@@ -26,14 +26,20 @@ public sealed class GoogleImport(LocalPreparation preparation, IOperationRegistr
         if (Convert.ToHexString(await SHA256.HashDataAsync(source.Content, ct)) != snapshot.Sha256) throw new LocalConflictException("Source changed; upload blocked.");
         // Hold the backup handle while checking and freezing the bytes that will be sent.
         await using var backup = new FileStream(snapshot.BackupPath, FileMode.Open, FileAccess.Read, FileShare.Read);
-        if (backup.Length > MaxBytes) throw new NotSupportedException("Imports support files up to 5 MiB; resumable support is pending.");
+        if (backup.Length > MaxBytes) throw new NotSupportedException("Imports support files up to 5 MiB.");
         using var buffer = new MemoryStream(); await backup.CopyToAsync(buffer, ct); var bytes = buffer.ToArray();
         if (bytes.LongLength != snapshot.Length || Convert.ToHexString(SHA256.HashData(bytes)) != snapshot.Sha256) throw new InvalidDataException("Snapshot integrity failure.");
         var payload = SpreadsheetFormats.Prepare(op.Format, bytes, textOptions);
         var canReplace = op.Format == "xlsx" || payload.Expected is not null;
         var sheetKey = "sheet:" + op.Id.ToString("N");
-        if (remote.Get(sheetKey) is not null)
+        if (remote.Get(sheetKey) is { } pending)
         {
+            if (pending.AccountId != access.AccountId || pending.Hash != snapshot.Sha256) throw new LocalConflictException("Upload binding changed.");
+            if (pending.FileId is null && drive.CanResume(pending, payload.Bytes, payload.MimeType))
+            {
+                try { remote.Candidate(sheetKey, await drive.ResumeAsync(pending, payload.Bytes, payload.MimeType, ct)); }
+                catch (ReconciliationRequiredException) { /* Reconcile the marker; never repeat initiation. */ }
+            }
             var known = await EnsureAsync(sheetKey, access.AccountId, "sheet", snapshot.Sha256,
                 _ => throw new ReconciliationRequiredException(), ct);
             return new ImportReceipt(op, GoogleDriveClient.Editor(known), source.Source.Path, canReplace);

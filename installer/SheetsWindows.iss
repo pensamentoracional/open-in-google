@@ -1,7 +1,10 @@
+#ifndef PilotVersion
+  #define PilotVersion "0.8.0"
+#endif
 [Setup]
 AppId={{D970FA65-0364-4F10-A6AA-D4302F31B607}
 AppName=Sheets Windows
-AppVersion=0.7.0
+AppVersion={#PilotVersion}
 AppPublisher=pensamentoracional
 DefaultDirName={localappdata}\Programs\SheetsWindows
 DefaultGroupName=Sheets Windows
@@ -32,8 +35,19 @@ Filename: "{app}\SheetsWindows.exe"; Description: "Configurar Sheets Windows"; F
 
 [Code]
 function PrepareToInstall(var NeedsRestart: Boolean): String;
+var
+  InstalledVersion: String;
+  InstalledPacked, PackagePacked: Int64;
 begin
   Result := '';
+  if RegQueryStringValue(HKCU, 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{D970FA65-0364-4F10-A6AA-D4302F31B607}_is1', 'DisplayVersion', InstalledVersion) then
+  begin
+    if not StrToVersion(InstalledVersion, InstalledPacked) then
+      Result := 'Installed version is invalid. Repair the version record before updating.'
+    else if StrToVersion('{#PilotVersion}', PackagePacked) then
+      if ComparePackedVersion(InstalledPacked, PackagePacked) > 0 then
+        Result := 'A newer version is installed. Downgrades require an explicit migration and are blocked.';
+  end;
   if CompareText(RemoveBackslashUnlessRoot(WizardDirValue),
     ExpandConstant('{localappdata}\Programs\SheetsWindows')) <> 0 then
     Result := 'Use the dedicated per-user installation directory. Other directories are not supported.';

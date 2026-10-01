@@ -1,7 +1,7 @@
 name: Local core
 on:
   push:
-    branches: ['feature/local-core', 'feature/google-import', 'feature/shortcut-replacement', 'feature/windows-integration', 'feature/installable-pilot', 'feature/formats-environments', 'main']
+    branches: ['feature/local-core', 'feature/google-import', 'feature/shortcut-replacement', 'feature/windows-integration', 'feature/installable-pilot', 'feature/formats-environments', 'feature/robustness', 'main']
   pull_request:
 permissions:
   contents: read
@@ -61,11 +61,15 @@ jobs:
           if (!(Test-Path $compiler)) { throw 'Inno Setup 6 compiler missing from Windows runner' }
           & $compiler installer/SheetsWindows.iss
           if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed' }
+          & $compiler /DPilotVersion=0.7.0 /Oartifacts/installer-old installer/SheetsWindows.iss
+          if ($LASTEXITCODE -ne 0) { throw 'Previous-version policy fixture compilation failed' }
 
       - name: Verify installation, upgrade and preservation on uninstall
         if: runner.os == 'Windows'
         shell: pwsh
-        run: ./installer/Test-Lifecycle.ps1
+        run: |
+          ./installer/Test-UpdateVerification.ps1
+          ./installer/Test-Lifecycle.ps1
 
       - uses: actions/upload-artifact@v4
         if: runner.os == 'Windows'

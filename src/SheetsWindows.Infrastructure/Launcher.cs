@@ -60,7 +60,7 @@ public static class LauncherErrors
 {
     public static bool Expected(Exception ex) => ex is IOException or InvalidDataException or UnauthorizedAccessException or InvalidOperationException
         or NotSupportedException or ArgumentException or Win32Exception or HttpRequestException or OperationCanceledException
-        or Microsoft.Data.Sqlite.SqliteException or System.Text.Json.JsonException or System.Xml.XmlException or KeyNotFoundException or SecurityException or ExcelDataReader.Exceptions.ExcelReaderException;
+        or System.Security.Cryptography.CryptographicException or Microsoft.Data.Sqlite.SqliteException or System.Text.Json.JsonException or System.Xml.XmlException or KeyNotFoundException or SecurityException or ExcelDataReader.Exceptions.ExcelReaderException;
     public static string Message(Exception ex) => ex switch
     {
         LauncherNotConfiguredException => "Conclua a configuração do piloto antes de abrir planilhas. Abra o Sheets Windows e clique em Configurar piloto.",
@@ -98,7 +98,7 @@ public sealed class WindowsLauncher(LocalStorage storage, HttpClient http, IBrow
         var preparation = storage.CreatePreparation(); var local = new SqliteOperationRegistry(storage.DatabasePath);
         var remote = new GoogleRemoteRegistry(System.IO.Path.Combine(storage.Root, "google.db")); var locks = new FileOperationLock(storage.LocksPath);
         var auth = Auth(client, locks);
-        var importer = new GoogleImport(preparation, local, remote, new SourceReader(), locks, auth, new GoogleDriveClient(http, auth), textOptions);
+        var importer = new GoogleImport(preparation, local, remote, new SourceReader(), locks, auth, new GoogleDriveClient(http, auth, new UploadSessionStore(Path.Combine(storage.Root, "uploads"))), textOptions);
         progress?.Report("Abrindo sua planilha no Google Sheets…");
         var receipt = await importer.ImportReceiptAsync(request.Path!, ct);
         if (!receipt.CanReplace) return await PublishCopyAsync(receipt, progress, ct);
@@ -117,10 +117,52 @@ public sealed class WindowsLauncher(LocalStorage storage, HttpClient http, IBrow
         await using (var preflight = sources.Open(path)) { }
         var locks = new FileOperationLock(storage.LocksPath); var auth = Auth(client, locks);
         var importer = new GoogleImport(storage.CreatePreparation(sources), new SqliteOperationRegistry(storage.DatabasePath),
-            new GoogleRemoteRegistry(Path.Combine(storage.Root, "google.db")), sources, locks, auth, new GoogleDriveClient(http, auth), options);
+            new GoogleRemoteRegistry(Path.Combine(storage.Root, "google.db")), sources, locks, auth, new GoogleDriveClient(http, auth, new UploadSessionStore(Path.Combine(storage.Root, "uploads"))), options);
         progress?.Report("Importando cópia; o original será conservado…");
         return await PublishCopyAsync(await importer.ImportReceiptAsync(path, ct), progress, ct);
     }
+    public async Task<string> ResumeAsync(Guid id, bool replace, IProgress<string>? progress = null, CancellationToken ct = default)
+    {
+        var local = new SqliteOperationRegistry(storage.DatabasePath);
+        var operation = local.Get(id) ?? throw new InvalidOperationException("Unknown operation.");
+        var journal = new ReplacementJournal(Path.Combine(storage.Root, "replacement.db"));
+        var recorded = journal.Get(id); var path = recorded?.SourcePath ?? operation.SourcePath;
+        var remote = new GoogleRemoteRegistry(Path.Combine(storage.Root, "google.db"));
+        var mapping = remote.Get("sheet:" + id.ToString("N")) ?? throw new ReconciliationRequiredException();
+        var client = await LauncherConfiguration.LoadClientAsync(storage, ct); var locks = new FileOperationLock(storage.LocksPath); var auth = Auth(client, locks);
+        var access = await auth.AccessAsync(cancellationToken: ct);
+        if (access.AccountId != operation.AccountId || mapping.AccountId != operation.AccountId) throw new LocalConflictException("Account changed.");
+        var drive = new GoogleDriveClient(http, auth, new UploadSessionStore(Path.Combine(storage.Root, "uploads")));
+        var options = operation.Format == "xlsx" ? null : ExtendedConfiguration.Load(storage);
+        ImportReceipt receipt;
+        if (File.Exists(path))
+        {
+            var sources = new SourceReader(copyEnvironments: !replace);
+            await using (var source = sources.Open(path))
+            {
+                if (source.Source.IdentityKey != operation.SourceKey || source.Source.Format != operation.Format) throw new LocalConflictException("Source changed.");
+                var importer = new GoogleImport(storage.CreatePreparation(sources), local, remote, sources, locks, auth, drive, options);
+                receipt = await importer.ImportReceiptAsync(path, ct);
+                if (receipt.Operation.Id != id) throw new LocalConflictException("Operation changed.");
+            }
+        }
+        else
+        {
+            // Only a recorded retirement can reconcile an absent original; no new upload is allowed.
+            if (!replace || recorded is null || recorded.Step < 3 || mapping.FileId is null || !mapping.Verified) throw new ReconciliationRequiredException();
+            var file = await drive.GetAsync(access.AccountId, mapping.FileId, ct);
+            if (file.Trashed || !file.CanEdit || file.MimeType != GoogleDriveClient.SheetMime
+                || !file.Properties.TryGetValue("sw_operation", out var marker) || marker != mapping.Marker
+                || !file.Properties.TryGetValue("sw_hash", out var hash) || hash != mapping.Hash) throw new ReconciliationRequiredException();
+            receipt = new(operation, GoogleDriveClient.Editor(mapping.FileId), path);
+        }
+        if (!replace) return await PublishCopyAsync(receipt, progress, ct);
+        if (!receipt.CanReplace || operation.Format == "xls") throw new CopyRequiredException();
+        var root = await File.ReadAllTextAsync(PilotSetup.PolicyPath(storage), ct);
+        return await new ReplacementCoordinator(local, remote, new BackupStore(storage.BackupsPath), locks, journal,
+            new WindowsRetirementReader(root), browser, new ConversionVerifier(drive, options)).ReplaceAsync(receipt, ct);
+    }
+
     private async Task<string> PublishCopyAsync(ImportReceipt receipt, IProgress<string>? progress, CancellationToken ct)
     {
         await using var held = await new FileOperationLock(storage.LocksPath).AcquireAsync(receipt.Operation.SourceKey, ct);

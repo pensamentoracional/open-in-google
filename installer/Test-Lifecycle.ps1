@@ -26,9 +26,10 @@ function Current-Uninstaller {
     return $path
 }
 $before = Defaults-Snapshot
+$oldSetup = (Resolve-Path 'artifacts/installer-old/SheetsWindows-Setup-win-x64.exe').Path
 $setup = (Resolve-Path 'artifacts/installer/SheetsWindows-Setup-win-x64.exe').Path
 Write-Host 'Running installer'
-Run-Checked $setup '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART'
+Run-Checked $oldSetup '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART'
 $exe = Join-Path $installed 'SheetsWindows.exe'
 if (!(Test-Path $exe)) { throw 'Executable not installed' }
 Run-Checked $exe '--version'
@@ -37,14 +38,20 @@ foreach ($extension in $extensions) {
     if ((Get-ItemProperty 'HKCU:/Software/SheetsWindows/Integration/Capabilities/FileAssociations').$extension -ne 'SheetsWindows.Xlsx') { throw "Missing association: $extension" }
 }
 # Data sentinels are outside the installation manifest; Google network access is never needed.
-foreach ($directory in @('backups', 'auth', 'shortcuts')) { New-Item (Join-Path $state $directory) -ItemType Directory -Force | Out-Null }
-$sentinels = @('registry.db', 'google.db', 'replacement.db', 'launcher-client.json', 'replacement-root.txt', 'backups/preserved.snapshot', 'formats.json', 'auth/preserved.dat', 'shortcuts/preserved.url')
+foreach ($directory in @('backups', 'auth', 'shortcuts', 'uploads', 'logs')) { New-Item (Join-Path $state $directory) -ItemType Directory -Force | Out-Null }
+$sentinels = @('registry.db', 'google.db', 'replacement.db', 'launcher-client.json', 'replacement-root.txt', 'backups/preserved.snapshot', 'formats.json', 'auth/preserved.dat', 'shortcuts/preserved.url', 'uploads/preserved.session', 'logs/events.jsonl')
 foreach ($name in $sentinels) { [IO.File]::WriteAllText((Join-Path $state $name), "preserve:$name") }
 $shortcut = Join-Path $env:RUNNER_TEMP 'preserved.url'
 [IO.File]::WriteAllText($shortcut, "[InternetShortcut]`r`nURL=https://docs.google.com/spreadsheets/d/test/edit`r`n")
 $shortcutBefore = [IO.File]::ReadAllText($shortcut)
 Write-Host 'Running installer'
 Run-Checked $setup '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART'
+# The previous-version package uses the same payload to exercise installer version policy.
+$key = 'HKCU:/Software/Microsoft/Windows/CurrentVersion/Uninstall/{D970FA65-0364-4F10-A6AA-D4302F31B607}_is1'
+if ((Get-ItemProperty $key).DisplayVersion -ne '0.8.0') { throw 'Upgrade version missing' }
+$reject = Start-Process -FilePath $oldSetup -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART' -PassThru
+if (!$reject.WaitForExit(120000)) { $reject.Kill(); throw 'Downgrade rejection timed out' }
+if ($reject.ExitCode -eq 0 -or (Get-ItemProperty $key).DisplayVersion -ne '0.8.0') { throw 'Downgrade was not blocked' }
 Write-Host 'Running registered uninstaller'
 Run-Checked (Current-Uninstaller) '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART'
 if (Test-Path $exe) { throw 'Installed executable remains' }

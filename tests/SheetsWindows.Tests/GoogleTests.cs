@@ -32,6 +32,7 @@ public sealed class GoogleTests
     {
         public byte[]? ExportOverride; public int Exports; public bool ExportUnauthorizedOnce;
         public readonly Dictionary<string, byte[]> Uploaded = []; public readonly List<string> MediaTypes = [];
+        private readonly Dictionary<string, (string Id, object File, string Mime, MemoryStream Bytes)> sessions = [];
         public int Posts; public bool LoseSheetResponse, LoseFolderResponse, ListLag, DuplicateList, WrongMime, Trashed, DenyEdit, Get401;
         public readonly Dictionary<string, object> Files = [];
         public readonly List<string> Methods = [];
@@ -44,6 +45,13 @@ public sealed class GoogleTests
                 string Value(string key) => Regex.Match(body, "\"" + key + "\":\"([^\"]*)\"").Groups[1].Value;
                 var mime = Value("mimeType"); var id = "file_" + Posts;
                 var file = new { id, mimeType = WrongMime && mime == GoogleDriveClient.SheetMime ? "application/octet-stream" : mime, trashed = Trashed && mime == GoogleDriveClient.SheetMime, capabilities = new { canEdit = !(DenyEdit && mime == GoogleDriveClient.SheetMime) }, appProperties = new Dictionary<string, string> { { "sw_operation", Value("sw_operation") }, { "sw_hash", Value("sw_hash") } } };
+                if (req.RequestUri.Query.Contains("uploadType=resumable"))
+                {
+                    sessions[id] = (id, file, req.Headers.GetValues("X-Upload-Content-Type").Single(), new MemoryStream());
+                    var response = new HttpResponseMessage(HttpStatusCode.OK);
+                    response.Headers.Location = new Uri("https://www.googleapis.com/upload/drive/v3/files?upload_id=" + id);
+                    return response;
+                }
                 Files[id] = file;
                 if (req.Content is MultipartContent parts)
                 {
@@ -52,6 +60,26 @@ public sealed class GoogleTests
                 if ((mime == GoogleDriveClient.SheetMime && LoseSheetResponse) || (mime == GoogleDriveClient.FolderMime && LoseFolderResponse))
                 { LoseSheetResponse = false; LoseFolderResponse = false; throw new HttpRequestException("Simulated lost response."); }
                 return Json(new { id });
+            }
+            if (req.Method == HttpMethod.Put && path == "/upload/drive/v3/files")
+            {
+                var id = req.RequestUri.Query.Split("upload_id=")[1]; var session = sessions[id];
+                var range = req.Content!.Headers.ContentRange!;
+                if (range.From is not null)
+                {
+                    if (range.From != session.Bytes.Length) throw new InvalidOperationException("Unexpected upload offset.");
+                    var data = await req.Content.ReadAsByteArrayAsync(ct); session.Bytes.Write(data);
+                }
+                if (session.Bytes.Length == range.Length)
+                {
+                    Files[id] = session.File;
+                    if (!Uploaded.ContainsKey(id)) { Uploaded[id] = session.Bytes.ToArray(); MediaTypes.Add(session.Mime); }
+                    if (LoseSheetResponse) { LoseSheetResponse = false; throw new HttpRequestException("Lost completion response"); }
+                    return Json(new { id });
+                }
+                var response = new HttpResponseMessage((HttpStatusCode)308);
+                if (session.Bytes.Length > 0) response.Headers.TryAddWithoutValidation("Range", "bytes=0-" + (session.Bytes.Length - 1));
+                return response;
             }
             if (req.Method != HttpMethod.Get) throw new InvalidOperationException("Unexpected destructive HTTP method.");
             if (path.EndsWith("/export"))
@@ -188,6 +216,26 @@ public sealed class GoogleTests
             Assert.StartsWith("network:", Assert.Single(w.Registry().Pending()).SourceKey);
         }
         finally { await Share("remove"); }
+    }
+    [WindowsFact]
+    public async Task RecoveryByIdCompletesBrowserFailureWithoutUploadingAgain()
+    {
+        using var w = new Workspace(); File.WriteAllBytes(w.Source, Workbook()); ConfigureLauncher(w, out var storage);
+        using var server = new DriveServer(); using var http = new HttpClient(server); var browser = new LauncherBrowser { Fail = true }; var launcher = new WindowsLauncher(storage, http, browser);
+        await Assert.ThrowsAsync<IOException>(() => launcher.OpenAsync(w.Source)); var operation = Assert.Single(w.Registry().Pending());
+        Assert.True(File.Exists(w.Source)); browser.Fail = false;
+        await launcher.ResumeAsync(operation.Id, true); Assert.False(File.Exists(w.Source)); Assert.Equal(2, server.Posts);
+        await launcher.ResumeAsync(operation.Id, true); Assert.Equal(2, server.Posts);
+    }
+    [WindowsFact]
+    public async Task RecoveryByIdCanChooseCopyAndRefusesARecreatedSource()
+    {
+        using var w = new Workspace(); File.WriteAllBytes(w.Source, Workbook()); ConfigureLauncher(w, out var storage);
+        using var server = new DriveServer(); using var http = new HttpClient(server); var browser = new LauncherBrowser { Fail = true }; var launcher = new WindowsLauncher(storage, http, browser);
+        await Assert.ThrowsAsync<IOException>(() => launcher.CopyAsync(w.Source)); var operation = Assert.Single(w.Registry().Pending()); browser.Fail = false;
+        var shortcut = await launcher.ResumeAsync(operation.Id, false); Assert.True(File.Exists(w.Source)); Assert.True(File.Exists(shortcut)); Assert.Equal(2, server.Posts);
+        File.Move(w.Source, w.Source + ".old"); File.WriteAllBytes(w.Source, Workbook());
+        await Assert.ThrowsAsync<LocalConflictException>(() => launcher.ResumeAsync(operation.Id, true)); Assert.True(File.Exists(w.Source)); Assert.Equal(2, server.Posts);
     }
     [WindowsFact]
     public async Task ExplorerActivationImportsAndRetiresThroughTheComposedLauncher()
