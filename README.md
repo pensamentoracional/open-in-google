@@ -1,57 +1,22 @@
-# Open in Google
+# Sheets Windows
 
-I don't have Microsoft 365. So every time someone sent me an `.xlsx`, or ChatGPT generated one for me, I did the same stupid dance: open drive.google.com, New → File upload, wait, right-click → Open with Sheets. Six clicks just to look at a spreadsheet. And lately it's gotten worse, because now the LLMs spit out CSVs and spreadsheets constantly, and every single one means doing that dance again.
+Projeto em preparação: abrir planilhas locais no Google Sheets e substituir o original por um atalho de Internet na mesma pasta, com backup recuperável.
 
-So I built the thing I wanted: right-click the file → "Open in Google Sheets." Done.
+**Estado:** etapa 1 documentada; aplicativo novo ainda não implementado. Os scripts PowerShell herdados continuam com o comportamento original: reabrir um arquivo atualiza sua cópia no Drive. Não utilizá-los como se já implementassem a proteção descrita no roadmap.
 
-## What it does
+## Relationship with Open in Google
 
-Right-click any Excel, CSV, Word, or PowerPoint file on Windows. It uploads to a folder in your Google Drive, converts it, and opens it in Sheets / Docs / Slides in your browser.
+Based on / derived from [Open in Google](https://github.com/SwatiK425/open-in-google), de Swati K. Base auditada: `124419b9ffce1f42c696ab9068fa9db6a4a9c199`. Os três scripts, SETUP.md, LICENSE e .gitignore foram preservados nesta etapa. O README original, com links ajustados à pasta de arquivo, está em docs/upstream/README.original.md. A licença MIT e o copyright original permanecem em LICENSE.
 
-Open the same file again next week and it updates that Drive copy instead of making a second one. Rename the file and it starts fresh. New name, new Drive file, which is what you'd expect.
+A evolução pertence ao fork e não depende de PRs aceitos. Correções genéricas poderão voltar ao upstream em branches independentes.
 
-`.xlsx` `.xls` `.csv` → Sheets · `.docx` `.doc` → Docs · `.pptx` `.ppt` → Slides
+## Documentação
 
-## Setup
+- [Auditoria](docs/AUDIT.md)
+- [Arquitetura](docs/ARCHITECTURE.md)
+- [Decisões](docs/adr/DECISIONS.md)
+- [Roadmap](docs/ROADMAP.md)
+- [Desenvolvimento e fork](docs/DEVELOPMENT.md)
+- [Conclusão da etapa 1](docs/STAGE_1.md)
 
-Two parts, about ten minutes, once ever.
-
-**Part 1: Give the app a Google credential (5 min).** Google doesn't let any app touch your Drive without one, so you create it in your own account. Free, and the app only ever gets permission to touch files it created itself. The rest of your Drive stays invisible to it.
-
-```mermaid
-flowchart LR
-    A[Cloud Console] --> B[New project]
-    B --> C[Enable Drive API]
-    C --> D[Consent screen<br/>+ add yourself<br/>as test user]
-    D --> E[OAuth client<br/>Desktop app]
-    E --> F[Download JSON]
-```
-
-The click-by-click version is in [SETUP.md](SETUP.md).
-
-**Part 2: Install on Windows (2 min).** Grab `open-in-google.zip` from [Releases](../../releases), extract it anywhere, open PowerShell in that folder:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\Install.ps1 -ClientJson "$env:USERPROFILE\Downloads\client_secret_*.apps.googleusercontent.com.json"
-```
-
-Right-click a spreadsheet → Open in Google Sheets. Your browser asks you to sign in once; you never see it again. No admin rights needed.
-
-## Privacy
-
-- This talks only to Google's APIs, straight from your PC. No server, no analytics, no account with anyone.
-- Your sign-in tokens are encrypted by Windows and never leave your machine.
-- It's three small scripts. Read them. That's the whole point of open source.
-
-## Things it doesn't do
-
-- Edits you make in the browser don't sync back to the file on your disk. The local file is the source; Drive is where you view and edit.
-- It needs internet to upload, obviously. After that it's just a Google doc.
-
-## If you hate it
-
-Run `Uninstall.ps1`. The right-click entries disappear; your Drive files stay where they are. Add `-RemoveAppData` to wipe the saved login too.
-
-## License
-
-MIT. See [LICENSE](LICENSE).
+O MVP será XLSX em pasta local não sincronizada, com OAuth, snapshot, backup, journal, lock, conversão verificada e atalho .url. ODS, XLS, CSV, TSV, OneDrive e rede são entregas posteriores. Não há sincronização bidirecional. O backup guarda os bytes da importação inicial, não edições online futuras.
