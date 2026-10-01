@@ -36,10 +36,10 @@ Journals transacionais de operação não são logs descartáveis e permanecem �
 **Atualizações** abre o workflow de pacotes no fork. A distribuição desta entrega usa artefatos de CI, com expiração indicada no GitHub, e não tem canal assinado de atualização automática. Selecionar somente o pacote e commit aprovados no registro de validação abaixo. Obter o digest do ZIP pelo guia/run aprovado, baixar o ZIP e verificar antes de extrair:
 
 ```powershell
-powershell -NoProfile -File .\installer\Verify-Update.ps1 -Archive 'C:\Downloads\SheetsWindows-Setup-win-x64.zip' -ExpectedSha256 '<digest SHA-256 do ZIP aprovado>'
+powershell -NoProfile -File .\installer\Verify-Update.ps1 -Archive 'C:\Downloads\SheetsWindows-Setup-win-x64.zip' -ExpectedSha256 '8dfd685a4e0a1b3f5b565ba45035f03a6dc3f75996a2e90f609d6ae649120477'
 ```
 
-O verificador aceita caminhos literais e recusa hash divergente ou reparse point. Não baixa, extrai nem executa o pacote. Hash confere integridade em relação ao registro aprovado; não substitui assinatura de editor. Fechar o aplicativo, extrair e executar o instalador explicitamente. O instalador conserva ID/pasta, registra a versão 0.8 e bloqueia instalação sobre uma versão superior. Não apagar os bancos para atualizar. OAuth, associações, opções, sessões, diagnósticos, atalhos e backups permanecem fora do manifesto de instalação/desinstalação.
+O [verificador](../installer/Verify-Update.ps1) aceita caminhos literais e recusa hash divergente ou reparse point. Não baixa, extrai nem executa o pacote. Hash confere integridade em relação ao registro aprovado; não substitui assinatura de editor. Fechar o aplicativo, extrair e executar o instalador explicitamente. O instalador conserva ID/pasta, registra a versão 0.8 e bloqueia instalação sobre uma versão superior. Não apagar os bancos para atualizar. OAuth, associações, opções, sessões, diagnósticos, atalhos e backups permanecem fora do manifesto de instalação/desinstalação.
 
 O CI compila um pacote de versão declarada 0.7 **com os mesmos binários atuais** para testar a política do instalador: instalação 0.7, upgrade 0.8, tentativa 0.7 recusada e preservação após desinstalação/reinstalação. Esse fixture não simula executar os binários antigos; migrações reais dos bancos anteriores continuam cobertas pelos testes das fases anteriores.
 
@@ -48,7 +48,7 @@ O CI compila um pacote de versão declarada 0.7 **com os mesmos binários atuais
 | Situação | Comportamento exigido | Evidência |
 |---|---|---|
 | Conexão cai após bloco aceito | Reinício consulta offset e envia apenas restantes; um POST | RobustnessTests.RestartAfterLostChunk… |
-| Resposta final se perde | Consulta recupera ID, sem novo conteúdo | LostCompletionResumes… |
+| Resposta final se perde | Consulta recupera ID, sem novo conteúdo; fluxo Windows retoma a mesma operação | LostCompletionResumes… / LauncherRestartRecoversLostUploadCompletion… |
 | Sessão expira | Reconciliação; nenhum segundo POST | ExpiredSessionRequires… |
 | Range inválido / ausência de progresso | Bloqueio e limite de requisições | MalformedOrComplete308… / NoProgress… |
 | Conta, conteúdo, MIME ou fonte muda | Bloqueio antes de continuar | ChangedPayloadAccountAndMime… / RecoveryByIdCanChooseCopy… |
@@ -64,8 +64,20 @@ A matriz complementa concorrência, crash por transição, fidelidade, SMB, migr
 
 ## Contribuição genérica isolada
 
-A branch `fix/literal-paths` parte diretamente da revisão original `124419b9`, sem nenhum componente C# ou política de substituição do fork. Corrige leitura de tamanho e existência com `-LiteralPath`: um nome com colchetes não deve selecionar outro arquivo como wildcard. O teste extrai somente a função de upload por AST, usa dois arquivos com tamanhos diferentes e HTTP falso, e roda no Windows PowerShell 5.1 sem OAuth, interface ou registro. A contribuição é preparada separadamente no fork; sua aceitação upstream não condiciona o produto.
+A branch `fix/literal-paths` parte diretamente da revisão original `124419b9`, sem nenhum componente C# ou política de substituição do fork. Corrige leitura de tamanho e existência com `-LiteralPath`: um nome com colchetes não deve selecionar outro arquivo como wildcard. O teste extrai somente a função de upload por AST, usa dois arquivos com tamanhos diferentes e HTTP falso, e roda no Windows PowerShell 5.1 sem OAuth, interface ou registro. A contribuição está no [PR independente #1, em rascunho no fork](https://github.com/pensamentoracional/open-in-google/pull/1), com [CI PowerShell aprovado](https://github.com/pensamentoracional/open-in-google/actions/runs/36879481261). Não foi enviada nem mesclada no upstream; sua aceitação upstream não condiciona o produto.
 
 ## Registro de validação
 
-Build e testes locais aprovados. CI Windows/Linux e pacote desta versão: registrar após execução completa. Aceite manual Windows 11/Google/OneDrive reais permanece pendente.
+Código aprovado: `dfe2922da406a5bb1904849e097c5dd19af5e858` na branch `feature/robustness`.
+
+[CI aprovado em Windows e Linux — execução 36882411612](https://github.com/pensamentoracional/open-in-google/actions/runs/36882411612): restore com lockfiles, build sem warnings, **169 testes**. Windows: **168 aprovados, 1 ignorado** (teste Unix). Linux: **142 aprovados, 27 ignorados** (verificações Windows/DPAPI/SMB). Zero falhas. No Windows, o CI também aprovou o pacote autossuficiente, verificação de hash, política de atualização/downgrade, desinstalação e reinstalação com todos os sentinelas e padrões do usuário preservados.
+
+[Baixar instalador 0.8 aprovado](https://github.com/pensamentoracional/open-in-google/actions/runs/36882411612/artifacts/11171354492). Artefato `SheetsWindows-Setup-win-x64`, ZIP de **37.727.610 bytes**, expira em **30/12/2026**. SHA-256 do ZIP (não do EXE extraído):
+
+```text
+8dfd685a4e0a1b3f5b565ba45035f03a6dc3f75996a2e90f609d6ae649120477
+```
+
+[Pacote portátil 0.8](https://github.com/pensamentoracional/open-in-google/actions/runs/36882411612/artifacts/11172180630), ZIP de 52.734.132 bytes, digest `ef8a1f7fe65b959a4b496f3bce509dc385a7ff7f7b96ab057b4d026e47d4acd8`. Backups, sessões e estado permanecem no perfil do usuário, fora do pacote.
+
+A matriz automatizada está aprovada para os cenários simulados e recursos nativos exercitados. Google usa HTTP simulado; DPAPI, handles Windows, registro e compartilhamento SMB foram exercitados no runner. Não houve upload de planilha real nem OAuth com credenciais do usuário. Aceite manual Windows 11/Google/OneDrive reais permanece pendente; não declarar encerramento universal do piloto.

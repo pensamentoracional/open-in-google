@@ -38,4 +38,4 @@ Usar a branch `feature/formats-environments` e habilitar os formatos na configur
 
 ### Robustez — fase 8
 
-Usar a branch `feature/robustness`, versão 0.8. [Retomada, matriz de falhas e atualização](docs/STAGE_8.md). Sessões de upload são protegidas por DPAPI; a recuperação reaproveita a operação existente. Diagnósticos têm limite de 256 KiB e não incluem caminhos, contas ou conteúdo. O instalador preserva os dados e bloqueia downgrade. O teste manual com Google real continua pendente.
+Usar a branch `feature/robustness`, versão 0.8. [Baixar instalador 0.8 aprovado](https://github.com/pensamentoracional/open-in-google/actions/runs/36882411612/artifacts/11171354492). [Retomada, matriz de falhas e atualização](docs/STAGE_8.md). Sessões de upload são protegidas por DPAPI; a recuperação reaproveita a operação existente. Diagnósticos têm limite de 256 KiB e não incluem caminhos, contas ou conteúdo. O instalador preserva os dados e bloqueia downgrade. O teste manual com Google real continua pendente.
