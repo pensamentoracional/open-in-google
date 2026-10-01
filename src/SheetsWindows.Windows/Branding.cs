@@ -37,7 +37,7 @@ internal static class Branding
             var about = new Button { Text = "Sobre / MIT", Dock = DockStyle.Right, Width = 132 };
             about.Click += (_, _) => { using var info = new AboutForm(); info.ShowDialog(form); }; header.Controls.Add(about);
         }
-        form.Controls.Add(header); header.BringToFront(); Theme(form);
+        form.Controls.Add(header); header.SendToBack(); Theme(form);
     }
 }
 internal sealed class AboutForm : Form

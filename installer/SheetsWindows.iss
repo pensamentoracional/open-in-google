@@ -4,6 +4,7 @@
 [Setup]
 AppId={{D970FA65-0364-4F10-A6AA-D4302F31B607}
 AppName=ZagoSheetsWin
+UninstallDisplayName=ZagoSheetsWin
 AppVersion={#PilotVersion}
 AppPublisher=Zagotools
 AppPublisherURL=https://github.com/pensamentoracional/open-in-google
