@@ -1,6 +1,6 @@
 # Etapa 9 — Consolidação e homologação do ZagoSheetsWin
 
-Etapa de fechamento acrescentada após a fase 8, conforme alinhamento com Fernando. Nome do produto: **ZagoSheetsWin**, evolução Zagotools do Open in Google, de Swati K (SwatiK425), sob MIT. Versão 0.9, branch `feature/zagosheetswin`.
+Etapa de fechamento acrescentada após a fase 8, conforme alinhamento com Fernando. Nome do produto: **ZagoSheetsWin**, evolução Zagotools do Open in Google, de Swati K (SwatiK425), sob MIT. Versão 0.9.1, branch `feature/zagosheetswin`.
 
 ## Entrega consolidada
 
@@ -47,17 +47,19 @@ O aceite será registrado após execução real; a implementação pronta não p
 
 ## Validação e pacote
 
-Código aprovado: `190e3521d4c23a4811721caa2d026adf9c4e17a0`. [CI aprovado — run 36923406047](https://github.com/zagozago/ZagoSheetsWin/actions/runs/36923406047).
+Atualização 0.9.1 após transferência e renomeação para `zagozago/ZagoSheetsWin`: links do aplicativo, instalador, créditos e documentação atualizados. Comportamento e identificadores de instalação/estado mantidos.
+
+Código aprovado: `04e8f75190acb61223c8d4f29490b6f036576f1b`. [CI aprovado — run 36926691912](https://github.com/zagozago/ZagoSheetsWin/actions/runs/36926691912).
 
 - Windows: 170 testes aprovados, zero falhas; 1 ignorado por verificar permissões Unix.
 - Linux: 142 aprovados, zero falhas; 29 específicos de Windows ignorados. Isso não distribui o aplicativo para Linux.
 - Build sem warnings; publicação self-contained x64 e dependências verificadas.
 - Instalação por usuário, atualização, bloqueio de downgrade, remoção e reinstalação aprovados; sentinelas de configuração, backups e atalhos conservadas e padrões do Windows intactos. A fixture 0.7 usa o payload atual para verificar a política de versão; a migração do nome antigo é verificada separadamente pelos testes de registro.
-- Prévias nativas de início, configuração, recuperação e Sobre revisadas visualmente na escala padrão do runner: logo, nome, créditos e controles sem sobreposição. [Baixar prévias](https://github.com/zagozago/ZagoSheetsWin/actions/runs/36923406047/artifacts/11192178905). DPI 125%/150% e teclado continuam no aceite real.
+- Prévias nativas de início, configuração, recuperação e Sobre revisadas visualmente na escala padrão do runner: logo, nome, créditos e controles sem sobreposição. [Baixar prévias](https://github.com/zagozago/ZagoSheetsWin/actions/runs/36926691912/artifacts/11194426761). DPI 125%/150% e teclado continuam no aceite real.
 - LICENSE original permanece sem alterações.
 
-[**Baixar instalador ZagoSheetsWin 0.9 — Windows x64**](https://github.com/zagozago/ZagoSheetsWin/actions/runs/36923406047/artifacts/11192533884). O ZIP contém `ZagoSheetsWin-Setup-win-x64.exe`; SHA-256 **do ZIP**: `aaa6e914968c654697e1213dc3fc4588a482a68877f8373b30153bef90c2fc49`. Download de artefatos exige login no GitHub e tem retenção até 30/12/2026.
+[**Baixar instalador ZagoSheetsWin 0.9.1 — Windows x64**](https://github.com/zagozago/ZagoSheetsWin/actions/runs/36926691912/artifacts/11193993461). O ZIP contém `ZagoSheetsWin-Setup-win-x64.exe`; SHA-256 **do ZIP**: `b523d612ea209ef745aae9e7a85dad82626ce2b8d05da255579dd60356c01c04`. Download de artefatos exige login no GitHub e tem retenção até 30/12/2026.
 
-[Pacote portátil aprovado](https://github.com/zagozago/ZagoSheetsWin/actions/runs/36923406047/artifacts/11192308801), SHA-256 do ZIP: `7cd4521939636a1968d0f9f35a648ed011c37509f4accf45fedb01a4e62b37f6`.
+[Pacote portátil aprovado](https://github.com/zagozago/ZagoSheetsWin/actions/runs/36926691912/artifacts/11194516757), SHA-256 do ZIP: `f3852390f09bc2258ca8f4267f70a715c2939e801b770c322c9ba2acec517203`.
 
 A consolidação técnica da etapa 9 está concluída. O roteiro real acima permanece pendente para o fechamento acordado; este pacote é o candidato de homologação, não um aceite automático de Google real.

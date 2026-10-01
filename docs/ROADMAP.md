@@ -109,4 +109,4 @@ Branch feature/robustness: sessões de upload protegidas e retomáveis, consulta
 
 ## Progresso da etapa 9
 
-Consolidação técnica concluída na branch feature/zagosheetswin, versão 0.9 (CI 36923406047 aprovado, 170 testes Windows / 142 Linux, instalador e revisão visual aprovados): identidade Zagotools e nome público ZagoSheetsWin, origem/Swati K/MIT preservados, migração de nome com proteção de valores alheios e roteiro único STAGE_9.md. Conforme alinhamento, homologação manual Windows 11/Google real fica para depois do pacote final; os testes automatizados continuam sendo requisito de cada alteração. Sem expansão para Word/Linux.
+Consolidação técnica concluída na branch feature/zagosheetswin, versão 0.9.1 (CI 36926691912 aprovado, 170 testes Windows / 142 Linux, instalador e revisão visual aprovados): identidade Zagotools e nome público ZagoSheetsWin, origem/Swati K/MIT preservados, migração de nome com proteção de valores alheios e roteiro único STAGE_9.md. Conforme alinhamento, homologação manual Windows 11/Google real fica para depois do pacote final; os testes automatizados continuam sendo requisito de cada alteração. Sem expansão para Word/Linux.

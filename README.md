@@ -2,7 +2,7 @@
 
 Projeto em preparação: abrir planilhas locais no Google Sheets e substituir o original por um atalho de Internet na mesma pasta, com backup recuperável.
 
-**Estado:** etapa 9 consolida o piloto 0.9 com nome ZagoSheetsWin, identidade Zagotools e créditos à origem. [Guia único de instalação, escopo e homologação](docs/STAGE_9.md). Suporte atual: planilhas no Windows; Google real/Explorer/Windows 11 serão homologados no fechamento. Os scripts PowerShell herdados ainda atualizam a cópia no Drive e não representam o fluxo seguro do aplicativo novo.
+**Estado:** etapa 9 consolida o piloto 0.9.1 com nome ZagoSheetsWin, identidade Zagotools e créditos à origem. [Guia único de instalação, escopo e homologação](docs/STAGE_9.md). Suporte atual: planilhas no Windows; Google real/Explorer/Windows 11 serão homologados no fechamento. Os scripts PowerShell herdados ainda atualizam a cópia no Drive e não representam o fluxo seguro do aplicativo novo.
 
 ## Relationship with Open in Google
 
@@ -44,4 +44,4 @@ Usar a branch `feature/robustness`, versão 0.8. [Baixar instalador 0.8 aprovado
 
 ### ZagoSheetsWin — etapa 9
 
-Versão 0.9 na branch `feature/zagosheetswin`. [Baixar instalador aprovado](https://github.com/zagozago/ZagoSheetsWin/actions/runs/36923406047/artifacts/11192533884). CI Windows/Linux aprovado, incluindo instalação/atualização/remoção e revisão visual das quatro telas. Logos e créditos incorporados ao instalador e às telas; Sobre / MIT identifica Open in Google e Swati K (SwatiK425). O nome novo preserva a instalação/estado anteriores por compatibilidade. [Pacote e roteiro final](docs/STAGE_9.md). A licença MIT original permanece íntegra.
+Versão 0.9.1 na branch `feature/zagosheetswin`. [Baixar instalador aprovado](https://github.com/zagozago/ZagoSheetsWin/actions/runs/36926691912/artifacts/11193993461). CI Windows/Linux aprovado, incluindo instalação/atualização/remoção e revisão visual das quatro telas. Logos e créditos incorporados ao instalador e às telas; Sobre / MIT identifica Open in Google e Swati K (SwatiK425). O nome novo preserva a instalação/estado anteriores por compatibilidade. [Pacote e roteiro final](docs/STAGE_9.md). A licença MIT original permanece íntegra.
