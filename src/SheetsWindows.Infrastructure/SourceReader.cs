@@ -38,7 +38,7 @@ public sealed class SourceReader : ISourceReader
         public ValueTask DisposeAsync() => stream.DisposeAsync();
     }
 
-    private static string WindowsKey(SafeFileHandle handle)
+    internal static string WindowsKey(SafeFileHandle handle)
     {
         if (!GetFileInformationByHandle(handle, out var info))
             throw new Win32Exception(Marshal.GetLastWin32Error());

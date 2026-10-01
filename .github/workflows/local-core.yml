@@ -1,7 +1,7 @@
 name: Local core
 on:
   push:
-    branches: ['feature/local-core', 'feature/google-import', 'main']
+    branches: ['feature/local-core', 'feature/google-import', 'feature/shortcut-replacement', 'main']
   pull_request:
 permissions:
   contents: read

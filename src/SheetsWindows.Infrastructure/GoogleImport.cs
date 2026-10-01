@@ -10,7 +10,8 @@ public sealed class GoogleImport(LocalPreparation preparation, IOperationRegistr
     ISourceReader sources, IOperationLock locks, IGoogleAuth auth, GoogleDriveClient drive)
 {
     public const int MaxBytes = 5 * 1024 * 1024;
-    public async Task<Uri> ImportAsync(string path, CancellationToken ct = default)
+    public async Task<Uri> ImportAsync(string path, CancellationToken ct = default) => (await ImportReceiptAsync(path, ct)).Url;
+    public async Task<ImportReceipt> ImportReceiptAsync(string path, CancellationToken ct = default)
     {
         await using (var preflight = sources.Open(path))
             if (preflight.Content.Length > MaxBytes) throw new NotSupportedException("MVP imports XLSX files up to 5 MiB.");
@@ -34,7 +35,7 @@ public sealed class GoogleImport(LocalPreparation preparation, IOperationRegistr
         {
             var known = await EnsureAsync(sheetKey, access.AccountId, "sheet", snapshot.Sha256,
                 _ => throw new ReconciliationRequiredException(), ct);
-            return GoogleDriveClient.Editor(known);
+            return new ImportReceipt(op, GoogleDriveClient.Editor(known));
         }
         var folderKey = "folder:" + access.AccountId;
         string folder;
@@ -42,7 +43,7 @@ public sealed class GoogleImport(LocalPreparation preparation, IOperationRegistr
             folder = await EnsureAsync(folderKey, access.AccountId, "folder", "", a => drive.CreateAsync(a, "Sheets Windows", null, null, ct), ct);
         var id = await EnsureAsync(sheetKey, access.AccountId, "sheet", snapshot.Sha256,
             a => drive.CreateAsync(a, Path.GetFileNameWithoutExtension(path), folder, bytes, ct), ct);
-        return GoogleDriveClient.Editor(id);
+        return new ImportReceipt(op, GoogleDriveClient.Editor(id));
     }
     private async Task<string> EnsureAsync(string key, string account, string kind, string hash, Func<RemoteAttempt, Task<string>> create, CancellationToken ct)
     {
