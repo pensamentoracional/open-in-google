@@ -61,7 +61,8 @@ jobs:
           if (!(Test-Path $compiler)) { throw 'Inno Setup 6 compiler missing from Windows runner' }
           & $compiler installer/SheetsWindows.iss
           if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed' }
-          & $compiler /DPilotVersion=0.7.0 /Oartifacts/installer-old installer/SheetsWindows.iss
+          $oldOutput = Join-Path (Get-Location).Path "artifacts/installer-old"
+          & $compiler /DPilotVersion=0.7.0 "/O$oldOutput" installer/SheetsWindows.iss
           if ($LASTEXITCODE -ne 0) { throw 'Previous-version policy fixture compilation failed' }
 
       - name: Verify installation, upgrade and preservation on uninstall

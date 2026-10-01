@@ -154,9 +154,14 @@ public sealed class RobustnessTests
     public async Task DiagnosticsRotateRemainBoundedAndExportOnlyKnownFields()
     {
         using var w = new Workspace(); var storage = new LocalStorage(Path.Combine(w.Root, "state")); var log = new DiagnosticLog(storage); var id = Guid.NewGuid();
-        for (var i = 0; i < 2200; i++) await log.RecordAsync(DiagnosticEvent.Failed, id);
+        await log.RecordAsync(DiagnosticEvent.Started, id);
+        var current = Path.Combine(storage.Root, "logs", "events.jsonl");
+        var line = JsonSerializer.Serialize(new DiagnosticEntry(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero), DiagnosticEvent.Failed, id)) + "\n";
+        var fullFile = string.Concat(Enumerable.Repeat(line, DiagnosticLog.MaxFileBytes / Encoding.UTF8.GetByteCount(line)));
+        // Represent accumulated history without thousands of redundant fsyncs/ACL writes on CI.
+        for (var i = 0; i < 5; i++) { File.WriteAllText(current, fullFile, new UTF8Encoding(false)); await log.RecordAsync(DiagnosticEvent.Failed, id); }
         var files = Directory.GetFiles(Path.Combine(storage.Root, "logs")); Assert.Equal(4, files.Length); Assert.All(files, file => Assert.InRange(new FileInfo(file).Length, 1, DiagnosticLog.MaxFileBytes));
-        var current = Path.Combine(storage.Root, "logs", "events.jsonl"); File.AppendAllText(current, "{\"Time\":\"2026-01-01T00:00:00Z\",\"Event\":0,\"Operation\":null,\"Token\":\"secret\",\"Path\":\"private.xlsx\"}\n");
+        File.AppendAllText(current, "{\"Time\":\"2026-01-01T00:00:00Z\",\"Event\":0,\"Operation\":null,\"Token\":\"secret\",\"Path\":\"private.xlsx\"}\n");
         var destination = Path.Combine(w.Root, "diagnostic.jsonl"); await log.ExportAsync(destination); var content = File.ReadAllText(destination);
         Assert.DoesNotContain("secret", content); Assert.DoesNotContain("private.xlsx", content); Assert.Contains(id.ToString(), content);
         await Assert.ThrowsAsync<IOException>(() => log.ExportAsync(destination));
