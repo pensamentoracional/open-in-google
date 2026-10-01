@@ -1,0 +1,15 @@
+name: Literal paths
+on:
+  push:
+    branches: ['fix/literal-paths']
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test literal paths without network or registry
+        shell: powershell
+        run: ./tests/Test-LiteralPaths.ps1

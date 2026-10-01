@@ -303,7 +303,7 @@ function Find-ExistingFile([string]$FolderId, [string]$Name) {
 
 function New-ConvertedFile([string]$FolderId, [string]$LocalPath, [string]$Name, [string]$SrcMime, [string]$DstMime) {
     $meta = @{ name = $Name; mimeType = $DstMime; parents = @($FolderId) } | ConvertTo-Json -Compress
-    $len = (Get-Item $LocalPath).Length
+    $len = (Get-Item -LiteralPath $LocalPath).Length
     # Resumable upload: start session, then PUT the bytes. Avoids multipart encoding issues.
     $sess = Invoke-WebRequest -Uri 'https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable' `
         -Method Post -UseBasicParsing `
@@ -341,7 +341,7 @@ function Log-CreatedFileDetails([string]$FileId) {
 
 # ---------------- main ----------------
 try {
-    if (-not (Test-Path $FilePath)) { Show-Error "File not found:`n$FilePath" }
+    if (-not (Test-Path -LiteralPath $FilePath)) { Show-Error "File not found:`n$FilePath" }
 
     $ext = [System.IO.Path]::GetExtension($FilePath).ToLowerInvariant()
     if (-not $TypeMap.ContainsKey($ext)) { Show-Error "Unsupported file type: $ext" }
