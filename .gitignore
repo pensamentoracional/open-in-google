@@ -14,3 +14,13 @@ filemap.json
 .DS_Store
 Thumbs.db
 .vscode/
+
+# .NET local outputs and private recovery state
+**/bin/
+**/obj/
+TestResults/
+*.db
+*.db-*
+*.snapshot
+*.lock
+*.tmp
