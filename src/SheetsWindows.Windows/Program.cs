@@ -9,8 +9,23 @@ internal static class Program
     {
         try
         {
+            if (args.Length == 2 && args[0] == "--preview-branding")
+            {
+                ApplicationConfiguration.Initialize();
+                var folder = Path.GetFullPath(args[1]); Directory.CreateDirectory(folder);
+                using var home = new LauncherForm(new LauncherRequest(LauncherAction.Home));
+                using var setupPreview = new SetupForm(); using var recoveryPreview = new RecoveryForm(); using var aboutPreview = new AboutForm();
+                foreach (var entry in new[] { ("home", (Form)home), ("setup", (Form)setupPreview), ("recovery", (Form)recoveryPreview), ("about", (Form)aboutPreview) })
+                {
+                    entry.Item2.CreateControl(); entry.Item2.PerformLayout();
+                    using var bitmap = new Bitmap(entry.Item2.Width, entry.Item2.Height);
+                    entry.Item2.DrawToBitmap(bitmap, new Rectangle(Point.Empty, bitmap.Size));
+                    bitmap.Save(Path.Combine(folder, entry.Item1 + ".png"), System.Drawing.Imaging.ImageFormat.Png);
+                }
+                return 0;
+            }
             var request = LauncherRequest.Parse(args);
-            if (request.Action == LauncherAction.Version) { Console.WriteLine("Sheets Windows pilot 0.8"); return 0; }
+            if (request.Action == LauncherAction.Version) { Console.WriteLine("ZagoSheetsWin pilot 0.9"); return 0; }
             if (request.Action is LauncherAction.Register or LauncherAction.Unregister)
             {
                 var held = new FileOperationLock(LocalStorage.ForCurrentUser().LocksPath).AcquireAsync("windows-registration").AsTask().GetAwaiter().GetResult();
@@ -31,7 +46,7 @@ internal static class Program
         catch (Exception ex) when (LauncherErrors.Expected(ex))
         {
             if (args.Length == 1 && args[0] is "--register" or "--unregister") { Console.Error.WriteLine("Association maintenance failed; existing state preserved."); return 1; }
-            MessageBox.Show("Use o Sheets Windows para abrir uma planilha suportada. " + LauncherErrors.Message(ex), "Sheets Windows", MessageBoxButtons.OK, MessageBoxIcon.Warning); return 1;
+            MessageBox.Show("Use o ZagoSheetsWin para abrir uma planilha suportada. " + LauncherErrors.Message(ex), "ZagoSheetsWin", MessageBoxButtons.OK, MessageBoxIcon.Warning); return 1;
         }
     }
 }

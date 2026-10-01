@@ -1,4 +1,4 @@
-# Sheets Windows — plano de desenvolvimento
+# ZagoSheetsWin — plano de desenvolvimento
 
 Data: 2026-10-01. Complementa SW_00_PRINCIPAL.md.
 Upstream: https://github.com/SwatiK425/open-in-google
@@ -42,6 +42,7 @@ Falhas em qualquer etapa mantêm uma representação local recuperável. Se a nu
 | 6 — Piloto instalável | Instalador por usuário, configuração inicial, restauração e desinstalação | Uso completo no Windows 11; desinstalação preserva atalhos, documentos e backups por padrão |
 | 7 — Formatos e ambientes | ODS, XLS, CSV, TSV; encoding/delimitadores; OneDrive e rede | Cada formato/ambiente ganha substituição apenas depois de testes de fidelidade e permissões |
 | 8 — Robustez e contribuições | Retomada de upload, erros, logs limitados, atualização e melhorias upstream isoladas | Matriz de falhas aprovada; PRs genéricos independentes da evolução |
+| 9 — Consolidação e homologação | Nome ZagoSheetsWin, identidade Zagotools, créditos MIT, pacote e roteiro único | CI/revisão do pacote; aceite real Windows 11/Google executado ao fim |
 
 Segurança, concorrência e proteção contra perda são requisitos das primeiras entregas; a etapa 8 amplia sua cobertura. XLSM permanece fora do MVP e exige avaliação de macros e consentimento específico sobre perda de funcionalidades antes de substituir o original.
 
@@ -105,3 +106,7 @@ Branch feature/formats-environments: CSV/TSV com encoding/delimitador estritos, 
 ## Progresso da etapa 8
 
 Branch feature/robustness: sessões de upload protegidas e retomáveis, consultas limitadas, recuperação por ID na interface, diagnóstico rotacionado sem conteúdo sensível e atualização explícita com conferência de hash/bloqueio de downgrade. Correção PowerShell genérica em fix/literal-paths, baseada diretamente no upstream original. Ver STAGE_8.md para matriz, evidências e limites. O aceite real Windows 11/Google continua pendente antes de encerrar o piloto.
+
+## Progresso da etapa 9
+
+Consolidação na branch feature/zagosheetswin, versão 0.9: identidade Zagotools e nome público ZagoSheetsWin, origem/Swati K/MIT preservados, migração de nome com proteção de valores alheios e roteiro único STAGE_9.md. Conforme alinhamento, homologação manual Windows 11/Google real fica para depois do pacote final; os testes automatizados continuam sendo requisito de cada alteração. Sem expansão para Word/Linux.

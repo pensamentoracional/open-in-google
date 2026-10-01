@@ -11,6 +11,28 @@ namespace SheetsWindows.Tests;
 public sealed class WindowsAssociationTests
 {
     [WindowsFact]
+    public void LegacyNameMigratesOnlyOwnedValuesAndPreservesDefaults()
+    {
+        using var f = new Hive();
+        foreach (var value in WindowsAssociationPlan.Values(f.Exe, legacy: true))
+        { using var key = f.Root.CreateSubKey(value.Key); key.SetValue(value.Name, value.Data, value.Kind == AssociationValueKind.String ? RegistryValueKind.String : RegistryValueKind.None); }
+        using (var ext = f.Root.CreateSubKey(@"Software\Classes\.xlsx")) ext.SetValue("", "Excel.Sheet.12");
+        var registration = new WindowsAssociationRegistration(f.Root); registration.Register(f.Exe); registration.Register(f.Exe);
+        using (var apps = f.Root.OpenSubKey(WindowsAssociationPlan.RegisteredApps)) { Assert.Equal(WindowsAssociationPlan.CapabilityPath, apps!.GetValue("ZagoSheetsWin")); Assert.Null(apps.GetValue("Sheets Windows")); }
+        using (var capability = f.Root.OpenSubKey(WindowsAssociationPlan.CapabilityPath)) Assert.Equal("ZagoSheetsWin", capability!.GetValue("ApplicationName"));
+        registration.Unregister(); using var after = f.Root.OpenSubKey(@"Software\Classes\.xlsx"); Assert.Equal("Excel.Sheet.12", after!.GetValue(""));
+    }
+    [WindowsFact]
+    public void ModifiedLegacyNameIsPreservedAndBlocksMigration()
+    {
+        using var f = new Hive();
+        foreach (var value in WindowsAssociationPlan.Values(f.Exe, legacy: true))
+        { using var key = f.Root.CreateSubKey(value.Key); key.SetValue(value.Name, value.Data, value.Kind == AssociationValueKind.String ? RegistryValueKind.String : RegistryValueKind.None); }
+        using (var key = f.Root.OpenSubKey(WindowsAssociationPlan.CapabilityPath, true)) key!.SetValue("ApplicationName", "Foreign name");
+        Assert.Throws<LocalConflictException>(() => new WindowsAssociationRegistration(f.Root).Register(f.Exe));
+        using var apps = f.Root.OpenSubKey(WindowsAssociationPlan.RegisteredApps); Assert.NotNull(apps!.GetValue("Sheets Windows")); Assert.Null(apps.GetValue("ZagoSheetsWin"));
+    }
+    [WindowsFact]
     public void RegistrationIsIdempotentAndPreservesExistingDefaults()
     {
         using var f = new Hive(); using (var ext = f.Root.CreateSubKey(@"Software\Classes\.xlsx")) ext.SetValue("", "Excel.Sheet.12");

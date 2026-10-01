@@ -63,8 +63,8 @@ public static class LauncherErrors
         or System.Security.Cryptography.CryptographicException or Microsoft.Data.Sqlite.SqliteException or System.Text.Json.JsonException or System.Xml.XmlException or KeyNotFoundException or SecurityException or ExcelDataReader.Exceptions.ExcelReaderException;
     public static string Message(Exception ex) => ex switch
     {
-        LauncherNotConfiguredException => "Conclua a configuração do piloto antes de abrir planilhas. Abra o Sheets Windows e clique em Configurar piloto.",
-        AuthorizationRequiredException => "O Google precisa de autorização. Abra o Sheets Windows e clique em Autorizar Google; depois abra a planilha novamente.",
+        LauncherNotConfiguredException => "Conclua a configuração do piloto antes de abrir planilhas. Abra o ZagoSheetsWin e clique em Configurar piloto.",
+        AuthorizationRequiredException => "O Google precisa de autorização. Abra o ZagoSheetsWin e clique em Autorizar Google; depois abra a planilha novamente.",
         ReconciliationRequiredException => "A importação aguarda reconciliação. Não repita o upload manualmente. Consulte o guia de recuperação.",
         ConversionMismatchException => "A conferência encontrou diferença nos dados convertidos. O original e o backup foram preservados. Não houve nova importação nem atualização remota.",
         CopyRequiredException => "Esta planilha requer importação de cópia; o original deve ser preservado.",

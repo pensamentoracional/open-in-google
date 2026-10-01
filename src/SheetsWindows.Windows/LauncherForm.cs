@@ -14,7 +14,7 @@ internal sealed class LauncherForm : Form
     public int ExitCode { get; private set; }
     public LauncherForm(LauncherRequest request)
     {
-        this.request = request; Text = "Sheets Windows"; ClientSize = new Size(720, 300); MinimumSize = new Size(500, 220);
+        this.request = request; Text = "ZagoSheetsWin"; ClientSize = new Size(900, 400); MinimumSize = new Size(760, 340);
         StartPosition = FormStartPosition.CenterScreen; AutoScaleMode = AutoScaleMode.Dpi;
         var buttons = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, Padding = new Padding(12), FlowDirection = FlowDirection.LeftToRight };
         var setup = new Button { Text = "Configurar piloto", AutoSize = true };
@@ -53,11 +53,12 @@ internal sealed class LauncherForm : Form
             else if (request.Action != LauncherAction.Home) await RunAsync(request.Action);
         };
         FormClosing += (_, e) => { if (busy) { e.Cancel = true; cancellation.Cancel(); cancel.Enabled = false; } };
+        Branding.Apply(this);
     }
     private bool OpenDefaults()
     {
         try { new BrowserLauncher().Open(WindowsAssociationPlan.DefaultsUri); return true; }
-        catch (Exception ex) when (LauncherErrors.Expected(ex)) { ExitCode = 1; status.Text = "Abra Configurações > Aplicativos > Aplicativos padrão e procure Sheets Windows."; return false; }
+        catch (Exception ex) when (LauncherErrors.Expected(ex)) { ExitCode = 1; status.Text = "Abra Configurações > Aplicativos > Aplicativos padrão e procure ZagoSheetsWin."; return false; }
     }
     private async Task RunAsync(LauncherAction action, string? path = null)
     {

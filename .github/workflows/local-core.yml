@@ -1,7 +1,7 @@
 name: Local core
 on:
   push:
-    branches: ['feature/local-core', 'feature/google-import', 'feature/shortcut-replacement', 'feature/windows-integration', 'feature/installable-pilot', 'feature/formats-environments', 'feature/robustness', 'main']
+    branches: ['feature/local-core', 'feature/google-import', 'feature/shortcut-replacement', 'feature/windows-integration', 'feature/installable-pilot', 'feature/formats-environments', 'feature/robustness', 'feature/zagosheetswin', 'main']
   pull_request:
 permissions:
   contents: read
@@ -37,7 +37,7 @@ jobs:
         shell: pwsh
         run: |
           $package = 'artifacts/SheetsWindows-win-x64'
-          foreach ($file in @('LICENSE', 'SheetsWindows.exe', 'SheetsWindows.runtimeconfig.json', 'System.Windows.Forms.dll', 'coreclr.dll', 'e_sqlite3.dll', 'ExcelDataReader.dll', 'third-party/ExcelDataReader-LICENSE.txt')) {
+          foreach ($file in @('LICENSE', 'ATTRIBUTION.md', 'SheetsWindows.exe', 'SheetsWindows.runtimeconfig.json', 'System.Windows.Forms.dll', 'coreclr.dll', 'e_sqlite3.dll', 'ExcelDataReader.dll', 'third-party/ExcelDataReader-LICENSE.txt')) {
             if (!(Test-Path (Join-Path $package $file))) { throw "Missing package dependency: $file" }
           }
           $image = [IO.File]::ReadAllBytes((Join-Path $package 'SheetsWindows.exe'))
@@ -47,10 +47,28 @@ jobs:
           if (!$probe.WaitForExit(30000)) { $probe.Kill(); throw 'Launcher startup timed out' }
           if ($probe.ExitCode -ne 0) { throw 'Published launcher failed to start' }
 
+      - name: Render native branding previews offline
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $exe = Join-Path (Get-Location).Path 'artifacts/SheetsWindows-win-x64/SheetsWindows.exe'
+          $output = Join-Path (Get-Location).Path 'artifacts/branding-preview'
+          $process = Start-Process -FilePath $exe -ArgumentList @('--preview-branding', $output) -PassThru
+          if (!$process.WaitForExit(30000)) { $process.Kill(); throw 'Branding render timed out' }
+          if ($process.ExitCode -ne 0) { throw 'Branding render failed' }
+          foreach ($file in @('home.png', 'setup.png', 'recovery.png', 'about.png')) {
+            if (!(Test-Path (Join-Path $output $file))) { throw "Missing preview: $file" }
+          }
       - uses: actions/upload-artifact@v4
         if: runner.os == 'Windows'
         with:
-          name: SheetsWindows-win-x64
+          name: ZagoSheetsWin-branding-preview
+          path: artifacts/branding-preview/
+
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'Windows'
+        with:
+          name: ZagoSheetsWin-win-x64
           path: artifacts/SheetsWindows-win-x64/
 
       - name: Compile per-user installer
@@ -75,6 +93,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: runner.os == 'Windows'
         with:
-          name: SheetsWindows-Setup-win-x64
-          path: artifacts/installer/SheetsWindows-Setup-win-x64.exe
+          name: ZagoSheetsWin-Setup-win-x64
+          path: artifacts/installer/ZagoSheetsWin-Setup-win-x64.exe
           if-no-files-found: error

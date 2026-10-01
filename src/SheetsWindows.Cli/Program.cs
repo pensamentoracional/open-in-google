@@ -22,7 +22,7 @@ try
             var exe = Path.GetFullPath(args[2]); _ = WindowsAssociationPlan.Command(exe);
             if (!File.Exists(exe)) throw new FileNotFoundException("Publish launcher first.");
             LauncherConfiguration.SaveClient(storage, await File.ReadAllTextAsync(args[1])); registration.Register(exe);
-            Console.WriteLine("Sheets Windows registrado para XLSX. Escolha o padrão nas Configurações do Windows; autorize o Google uma vez.");
+            Console.WriteLine("ZagoSheetsWin registrado para XLSX. Escolha o padrão nas Configurações do Windows; autorize o Google uma vez.");
         }
         else { registration.Unregister(); Console.WriteLine("Registro do candidato removido. Documentos, atalhos e backups foram conservados."); }
         WindowsAssociationRegistration.NotifyShell(); return 0;

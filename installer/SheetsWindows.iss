@@ -1,24 +1,31 @@
 #ifndef PilotVersion
-  #define PilotVersion "0.8.0"
+  #define PilotVersion "0.9.0"
 #endif
 [Setup]
 AppId={{D970FA65-0364-4F10-A6AA-D4302F31B607}
-AppName=Sheets Windows
+AppName=ZagoSheetsWin
 AppVersion={#PilotVersion}
-AppPublisher=pensamentoracional
+AppPublisher=Zagotools
+AppPublisherURL=https://github.com/pensamentoracional/open-in-google
+AppSupportURL=https://github.com/pensamentoracional/open-in-google/issues
+SetupIconFile=..\branding\zagosheetswin.ico
+WizardImageFile=..\branding\wizard.bmp
+WizardSmallImageFile=..\branding\wizard-small.bmp
+WizardImageBackColor=$0B1007
 DefaultDirName={localappdata}\Programs\SheetsWindows
-DefaultGroupName=Sheets Windows
+DefaultGroupName=ZagoSheetsWin
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 DisableDirPage=yes
 DisableProgramGroupPage=yes
 OutputDir=..\artifacts\installer
-OutputBaseFilename=SheetsWindows-Setup-win-x64
+OutputBaseFilename=ZagoSheetsWin-Setup-win-x64
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
 LicenseFile=..\LICENSE
+InfoBeforeFile=..\branding\CREDITS.txt
 UninstallDisplayIcon={app}\SheetsWindows.exe
 CloseApplications=yes
 
@@ -26,12 +33,12 @@ CloseApplications=yes
 Source: "..\artifacts\SheetsWindows-win-x64\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\Sheets Windows"; Filename: "{app}\SheetsWindows.exe"
+Name: "{group}\ZagoSheetsWin"; Filename: "{app}\SheetsWindows.exe"
 Name: "{group}\Restaurar backups"; Filename: "{app}\SheetsWindows.exe"; Parameters: "--recovery"
-Name: "{group}\Desinstalar Sheets Windows"; Filename: "{uninstallexe}"
+Name: "{group}\Desinstalar ZagoSheetsWin"; Filename: "{uninstallexe}"
 
 [Run]
-Filename: "{app}\SheetsWindows.exe"; Description: "Configurar Sheets Windows"; Flags: postinstall nowait skipifsilent
+Filename: "{app}\SheetsWindows.exe"; Description: "Configurar ZagoSheetsWin"; Flags: postinstall nowait skipifsilent
 
 [Code]
 function PrepareToInstall(var NeedsRestart: Boolean): String;
@@ -74,3 +81,18 @@ begin
   if CurUninstallStep = usUninstall then MaintainAssociation('--unregister');
 end;
 // No UninstallDelete: state, OAuth, backups, user .url and Google files are never installed here.
+
+procedure InitializeWizard;
+var
+  Credit: TNewStaticText;
+begin
+  Credit := TNewStaticText.Create(WizardForm);
+  Credit.Parent := WizardForm;
+  Credit.Caption := 'Zagotools | Open in Google - Swati K (SwatiK425) | MIT';
+  Credit.Left := ScaleX(8);
+  Credit.Top := WizardForm.ClientHeight - ScaleY(31);
+  Credit.Width := WizardForm.BackButton.Left - ScaleX(16);
+  Credit.WordWrap := True;
+  Credit.Height := ScaleY(24);
+  Credit.Font.Size := 7;
+end;

@@ -10,7 +10,7 @@ internal sealed class RecoveryForm : Form
     private readonly Label status = new() { Dock = DockStyle.Top, Height = 70, Padding = new Padding(12), Text = "Restaure o arquivo original inicial em um novo arquivo. A restauração funciona offline, verifica o backup e nunca sobrescreve arquivos existentes. O Sheets e o atalho permanecem disponíveis." };
     public RecoveryForm()
     {
-        Text = "Recuperar operação e backups — Sheets Windows"; ClientSize = new Size(760, 360); AutoScaleMode = AutoScaleMode.Dpi; StartPosition = FormStartPosition.CenterScreen;
+        Text = "Recuperar operação e backups — ZagoSheetsWin"; ClientSize = new Size(900, 470); AutoScaleMode = AutoScaleMode.Dpi; StartPosition = FormStartPosition.CenterScreen;
         var restore = new Button { Text = "Restaurar em…", Dock = DockStyle.Bottom, Height = 44 };
         var actions = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 90, Padding = new Padding(8) };
         var copy = new Button { Text = "Retomar como cópia", AutoSize = true };
@@ -67,5 +67,6 @@ internal sealed class RecoveryForm : Form
             catch (Exception ex) when (LauncherErrors.Expected(ex)) { status.Text = "Não foi possível restaurar. Escolha um nome inexistente e confira a pasta de destino. O backup foi conservado."; }
             finally { busy = false; restore.Enabled = true; entries.Enabled = true; actions.Enabled = true; }
         };
+        Branding.Apply(this);
     }
 }

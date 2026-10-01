@@ -11,7 +11,7 @@ internal sealed class SetupForm : Form
     private readonly Label status = new() { AutoSize = true, MaximumSize = new Size(580, 0) };
     public SetupForm()
     {
-        Text = "Configurar piloto — Sheets Windows"; ClientSize = new Size(660, 630); AutoScaleMode = AutoScaleMode.Dpi; StartPosition = FormStartPosition.CenterScreen;
+        Text = "Configurar piloto — ZagoSheetsWin"; ClientSize = new Size(760, 760); AutoScaleMode = AutoScaleMode.Dpi; StartPosition = FormStartPosition.CenterScreen;
         var layout = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(18), ColumnCount = 1, RowCount = 15, AutoScroll = true };
         layout.Controls.Add(new Label { AutoSize = true, MaximumSize = new Size(580, 0), Text = "Piloto XLSX até 5 MiB, sem VBA. A conversão pode perder recursos do Excel. O backup guarda o original inicial; não existe sincronização de volta. Selecione o JSON OAuth de aplicativo desktop do seu projeto Google e uma pasta dedicada." });
         var chooseClient = new Button { AutoSize = true, Text = "Escolher JSON OAuth desktop" };
@@ -50,5 +50,6 @@ internal sealed class SetupForm : Form
         layout.Controls.Add(save); layout.Controls.Add(status);
         layout.Controls.Add(new Button { Text = "Fechar", AutoSize = true, DialogResult = DialogResult.Cancel }); Controls.Add(layout);
         var policy = PilotSetup.PolicyPath(LocalStorage.ForCurrentUser()); if (File.Exists(policy)) folder.Text = File.ReadAllText(policy);
+        Branding.Apply(this);
     }
 }

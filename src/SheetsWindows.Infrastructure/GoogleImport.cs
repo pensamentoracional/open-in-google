@@ -47,7 +47,7 @@ public sealed class GoogleImport(LocalPreparation preparation, IOperationRegistr
         var folderKey = "folder:" + access.AccountId;
         string folder;
         await using (var folderLock = await locks.AcquireAsync(folderKey, ct))
-            folder = await EnsureAsync(folderKey, access.AccountId, "folder", "", a => drive.CreateAsync(a, "Sheets Windows", null, null, ct), ct);
+            folder = await EnsureAsync(folderKey, access.AccountId, "folder", "", a => drive.CreateAsync(a, "ZagoSheetsWin", null, null, ct), ct);
         var id = await EnsureAsync(sheetKey, access.AccountId, "sheet", snapshot.Sha256,
             a => drive.CreateAsync(a, Path.GetFileNameWithoutExtension(path), folder, payload.Bytes, ct, payload.MimeType), ct);
         return new ImportReceipt(op, GoogleDriveClient.Editor(id), source.Source.Path, canReplace);

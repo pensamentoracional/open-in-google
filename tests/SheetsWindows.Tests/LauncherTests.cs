@@ -36,7 +36,7 @@ public sealed class LauncherTests
         Assert.DoesNotContain(plan, v => v.Key == @"Software\Classes\.xlsx");
         Assert.DoesNotContain(plan, v => v.Key.Contains(".url", StringComparison.OrdinalIgnoreCase) || v.Name is ".xlsm" or ".xlsb");
         Assert.Equal(SpreadsheetFormats.Extensions.Order(), plan.Where(v => v.Key == WindowsAssociationPlan.CapabilityPath + @"\FileAssociations").Select(v => v.Name).Order());
-        Assert.Equal("Sheets Windows", Uri.UnescapeDataString(WindowsAssociationPlan.DefaultsUri.Query.Split('=')[1]));
+        Assert.Equal("ZagoSheetsWin", Uri.UnescapeDataString(WindowsAssociationPlan.DefaultsUri.Query.Split('=')[1]));
     }
     [Fact]
     public void UnsafeExecutableCommandsRejected()

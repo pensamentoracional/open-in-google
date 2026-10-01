@@ -9,7 +9,8 @@ public enum AssociationValueKind { String, None }
 
 public static class WindowsAssociationPlan
 {
-    public const string AppName = "Sheets Windows";
+    public const string AppName = "ZagoSheetsWin";
+    public const string LegacyName = "Sheets Windows";
     public const string ProgId = "SheetsWindows.Xlsx";
     public const string AppRoot = @"Software\SheetsWindows\Integration";
     public const string ProgRoot = @"Software\Classes\SheetsWindows.Xlsx";
@@ -27,25 +28,26 @@ public static class WindowsAssociationPlan
         return "\"" + Path.GetFullPath(exe) + "\" --open \"%1\"";
     }
     public sealed record Value(string Key, string Name, object Data, AssociationValueKind Kind);
-    public static IReadOnlyList<Value> Values(string exe)
+    public static IReadOnlyList<Value> Values(string exe, bool legacy = false)
     {
+        var name = legacy ? LegacyName : AppName;
         var command = Command(exe); var full = Path.GetFullPath(exe);
         List<Value> values = [
             new(AppRoot, "SW_Owner", Owner, AssociationValueKind.String), new(AppRoot, "SW_Executable", full, AssociationValueKind.String),
             new(ProgRoot, "SW_Owner", Owner, AssociationValueKind.String), new(ProgRoot, "SW_Executable", full, AssociationValueKind.String),
             new(ExecutableRoot, "SW_Owner", Owner, AssociationValueKind.String), new(ExecutableRoot, "SW_Executable", full, AssociationValueKind.String),
-            new(CapabilityPath, "ApplicationName", AppName, AssociationValueKind.String),
+            new(CapabilityPath, "ApplicationName", name, AssociationValueKind.String),
             new(CapabilityPath, "ApplicationDescription", "Importa XLSX para Google Sheets e substitui por atalho, mantendo backup privado.", AssociationValueKind.String),
             new(CapabilityPath, "ApplicationIcon", "\"" + full + "\",0", AssociationValueKind.String),
             new(CapabilityPath + @"\FileAssociations", ".xlsx", ProgId, AssociationValueKind.String),
             new(ProgRoot, "", "Planilha no Google Sheets", AssociationValueKind.String), new(ProgRoot, "FriendlyTypeName", "Planilha no Google Sheets", AssociationValueKind.String),
             new(ProgRoot + @"\DefaultIcon", "", "\"" + full + "\",0", AssociationValueKind.String),
             new(ProgRoot + @"\shell\open\command", "", command, AssociationValueKind.String),
-            new(ExecutableRoot, "FriendlyAppName", AppName, AssociationValueKind.String),
+            new(ExecutableRoot, "FriendlyAppName", name, AssociationValueKind.String),
             new(ExecutableRoot + @"\SupportedTypes", ".xlsx", "", AssociationValueKind.String),
             new(ExecutableRoot + @"\shell\open\command", "", command, AssociationValueKind.String),
             new(OpenWith, ProgId, Array.Empty<byte>(), AssociationValueKind.None),
-            new(RegisteredApps, AppName, CapabilityPath, AssociationValueKind.String)
+            new(RegisteredApps, name, CapabilityPath, AssociationValueKind.String)
         ];
         foreach (var extension in SpreadsheetFormats.Extensions.Where(e => e != ".xlsx"))
         {
@@ -80,7 +82,7 @@ public sealed class WindowsAssociationRegistration(RegistryKey userRoot)
             if (key.GetValue("SW_Executable") is string prior)
             {
                 if (!string.Equals(prior, Path.GetFullPath(exe), StringComparison.OrdinalIgnoreCase)) throw new LocalConflictException("Unregister before moving the executable.");
-                old[root] = WindowsAssociationPlan.Values(prior);
+                old[root] = WindowsAssociationPlan.Values(prior, legacy: true);
             }
         }
         foreach (var value in plan)
@@ -91,11 +93,23 @@ public sealed class WindowsAssociationRegistration(RegistryKey userRoot)
             var previous = ownerRoot is not null && old.TryGetValue(ownerRoot, out var priorPlan) ? priorPlan.SingleOrDefault(v => v.Key == value.Key && v.Name == value.Name) : null;
             if (previous is null || !Matches(key, previous)) throw new LocalConflictException("Registry value changed; registration blocked.");
         }
+        using (var apps = userRoot.OpenSubKey(WindowsAssociationPlan.RegisteredApps))
+        {
+            if (apps is not null && apps.GetValueNames().Contains(WindowsAssociationPlan.LegacyName)
+                && (!old.ContainsKey(WindowsAssociationPlan.AppRoot)
+                    || apps.GetValueKind(WindowsAssociationPlan.LegacyName) != RegistryValueKind.String
+                    || !Equals(apps.GetValue(WindowsAssociationPlan.LegacyName), WindowsAssociationPlan.CapabilityPath)))
+                throw new LocalConflictException("Legacy registered app was modified.");
+        }
         // Registry writes are not a distributed transaction; ownership is written first, allowing safe re-registration after interruption.
         foreach (var value in plan)
         {
             using var key = userRoot.CreateSubKey(value.Key, writable: true); key.SetValue(value.Name, value.Data, Kind(value.Kind)); key.Flush();
         }
+        // Retire only the exact legacy alias after the new registration has been published.
+        using var registered = userRoot.OpenSubKey(WindowsAssociationPlan.RegisteredApps, writable: true);
+        if (registered is not null && Equals(registered.GetValue(WindowsAssociationPlan.LegacyName), WindowsAssociationPlan.CapabilityPath))
+            registered.DeleteValue(WindowsAssociationPlan.LegacyName, false);
     }
     public void Unregister()
     {
@@ -103,7 +117,7 @@ public sealed class WindowsAssociationRegistration(RegistryKey userRoot)
         if (main is null) return;
         if (!Equals(main.GetValue("SW_Owner"), WindowsAssociationPlan.Owner)) throw new LocalConflictException("Registration is not owned by this app.");
         var exe = main.GetValue("SW_Executable") as string ?? throw new LocalConflictException("Incomplete registration; re-register first.");
-        var plan = WindowsAssociationPlan.Values(exe);
+        var plan = WindowsAssociationPlan.Values(exe).Concat(WindowsAssociationPlan.Values(exe, legacy: true)).ToArray();
         foreach (var root in WindowsAssociationPlan.OwnedRoots)
         {
             using var key = userRoot.OpenSubKey(root);
