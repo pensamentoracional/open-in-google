@@ -30,8 +30,14 @@ Sem serviço residente. Não implementa criação de nova planilha nem gestão a
 
 Local: 153 testes aprovados / 30 exclusivos Windows ignorados, zero falhas; build WinForms sem warnings/erros. Regressões validam primeiro uso incompleto, instalação existente com refresh token e access token expirado, identidade incompatível, configuração inválida preservada e parsing do comando sem arquivo. CI verifica que instalação/atualização silenciosa não abre janela do launcher e conserva estado, preferências, ícone, atalhos e padrões do Windows.
 
-Prévias nativas: home, configurações compactas, primeiro uso, configurações avançadas, recuperação e Sobre. CI, prévias e instalador ainda aguardando aprovação deste pacote. Prévias automatizadas são do DPI padrão do runner; DPI 125/150/200%, Google real e associação no Windows 11 permanecem para aceite manual. Não afirmar homologação dessas variantes pelo build.
+Prévias nativas: home, configurações compactas, primeiro uso, configurações avançadas, recuperação e Sobre. As seis prévias foram revisadas: instruções e opções completas na tela compacta; Avançado usa rolagem vertical sem cortar textos. Prévias automatizadas são do DPI padrão do runner; DPI 125/150/200%, Google real e associação no Windows 11 permanecem para aceite manual. Não afirmar homologação dessas variantes pelo build.
 
 ## Internacionalização
 
 Seção 8 de ALPHA_NEXT_v2.md incorporada ao plano do repositório sem regredir os resultados das etapas 1/2 ou o padrão claro já decidido. Matriz, seleção pelo Windows, scripts/RTL, catálogo, fallback inglês e integração dos 51 idiomas permanecem aprovados para planejamento. Auditoria inicial das superfícies em [LOCALIZATION_AUDIT.md](LOCALIZATION_AUDIT.md); recursos traduzidos não implementados nesta etapa.
+
+## Pacote aprovado
+
+Versão 0.9.4 aprovada no [CI 37097216126](https://github.com/zagozago/ZagoSheetsWin/actions/runs/37097216126), commit `ccd89cd9a34a3932f64924dc864aa918959d4ee7`: Windows 182 testes aprovados / 1 exclusivo Unix ignorado; Linux 153 aprovados / 30 exclusivos Windows ignorados. Zero falhas. Build, pacote, compilação Inno Setup, instalação por usuário, atualização, bloqueio de downgrade, desinstalação e reinstalação aprovados; dados, atalhos e padrões preservados. Instalação silenciosa sem janela do launcher verificada. Prévia nativa de seis telas revisada.
+
+[Baixar instalador alpha 0.9.4 — Windows x64](https://github.com/zagozago/ZagoSheetsWin/actions/runs/37097216126/artifacts/11264632553). ZIP contém `ZagoSheetsWin-Setup-win-x64.exe`; SHA-256 do ZIP: `3070053cb47106f3421983214c71951dee1e29cba383bc8d373b900a304ec10e`. Download exige login no GitHub; retenção até 01/01/2027. Atualizar sem limpar o estado preserva configuração, autorização, backups e preferência XLS. Primeiro uso interativo e associação efetiva no Windows 11 com Google real permanecem no aceite final.

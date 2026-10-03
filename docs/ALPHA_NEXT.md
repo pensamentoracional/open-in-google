@@ -1,6 +1,6 @@
 # Próxima evolução alpha — ZagoSheetsWin
 
-Decisões e prioridades alinhadas com Fernando em 03/10/2026. Este documento descreve trabalho aprovado e propostas; não declara implementação nem homologação concluídas. Pacote aprovado: 0.9.3 (etapas 1 e 2); CI Windows/Linux e instalador aprovados. Teste Google real desta correção permanece pendente.
+Decisões e prioridades alinhadas com Fernando em 03/10/2026. Este documento descreve trabalho aprovado e propostas; não declara implementação nem homologação concluídas. Pacote aprovado: 0.9.4 (etapas 1, 2 e 3); CI Windows/Linux, instalador e prévias nativas aprovados. Teste Google real desta correção permanece pendente.
 
 ## Evidências do piloto real
 
@@ -28,7 +28,7 @@ Implementada em 0.9.3, com ícone dos novos atalhos; ver [ALPHA_2_XLS.md](ALPHA_
 
 ## 3. Instalação e primeiro uso
 
-Implementada em 0.9.4; ver [ALPHA_3_SETUP.md](ALPHA_3_SETUP.md). CI, prévia e aceite real pendentes.
+Implementada em 0.9.4; ver [ALPHA_3_SETUP.md](ALPHA_3_SETUP.md). CI 37097216126, instalador e prévias nativas aprovados; aceite manual Windows 11/Google real pendente.
 
 - Reduzir wizard: instalação padrão por usuário, destino automático e menos páginas obrigatórias. Manter logo, créditos e MIT visíveis/acessíveis sem páginas extras obrigatórias para cada conteúdo.
 - Abrir primeiro uso ao concluir instalação interativa, sem abrir UI na instalação silenciosa/CI. Em atualização, considerar configuração existente para evitar repetir onboarding.
