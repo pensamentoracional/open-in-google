@@ -125,3 +125,8 @@ CSV: diagnóstico específico, capacidade de 500.000 células / 50.000 linhas / 
 ## Evolução alpha — etapa 2
 
 XLS com substituição por padrão, preferência configurável, conferência de valores e backup integral. Novos atalhos usam ICO fornecido em caminho persistente. Versão 0.9.3; ver [fluxo, limites e validação](ALPHA_2_XLS.md). CI 37096149671 e instalador aprovados (180 testes Windows / 151 Linux); aceite Google real/Explorer pendente.
+
+
+## Evolução alpha — etapa 3
+
+Instalador curto e primeiro uso na mesma tela (pasta, conexão Google e padrões Windows), JSON e formatos em Avançado, atualização sem repetir onboarding configurado. Versão 0.9.4; [escopo e validação](ALPHA_3_SETUP.md). Plano atualizado com a etapa 8 de internacionalização em 51 idiomas e auditoria inicial de superfícies; traduções ainda pendentes. CI/instalador e aceite real pendentes.

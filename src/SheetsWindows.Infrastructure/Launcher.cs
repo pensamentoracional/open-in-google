@@ -5,11 +5,12 @@ using SheetsWindows.Core;
 
 namespace SheetsWindows.Infrastructure;
 
-public enum LauncherAction { Home, Open, Login, Defaults, Version, Setup, Recovery, Register, Unregister, Copy }
+public enum LauncherAction { Home, Open, Login, Defaults, Version, Setup, Recovery, Register, Unregister, Copy, FirstUse }
 public sealed record LauncherRequest(LauncherAction Action, string? Path = null)
 {
     public static LauncherRequest Parse(string[] args)
     {
+        if (args.Length == 1 && args[0] == "--first-use") return new(LauncherAction.FirstUse);
         if (args.Length == 1 && args[0] == "--setup") return new(LauncherAction.Setup);
         if (args.Length == 1 && args[0] == "--recovery") return new(LauncherAction.Recovery);
         if (args.Length == 1 && args[0] == "--register") return new(LauncherAction.Register);
@@ -63,7 +64,7 @@ public static class LauncherErrors
         or System.Security.Cryptography.CryptographicException or Microsoft.Data.Sqlite.SqliteException or System.Text.Json.JsonException or System.Xml.XmlException or KeyNotFoundException or SecurityException or ExcelDataReader.Exceptions.ExcelReaderException;
     public static string Message(Exception ex) => ex switch
     {
-        LauncherNotConfiguredException => "Conclua a configuração do piloto antes de abrir planilhas. Abra o ZagoSheetsWin e clique em Configurar piloto.",
+        LauncherNotConfiguredException => "Conclua o primeiro uso antes de abrir planilhas. Abra o ZagoSheetsWin ou suas Configurações para escolher a pasta e conectar ao Google.",
         AuthorizationRequiredException => "O Google precisa de autorização. Abra o ZagoSheetsWin e clique em Autorizar Google; depois abra a planilha novamente.",
         ReconciliationRequiredException => "A importação aguarda reconciliação. Não repita o upload manualmente. Consulte o guia de recuperação.",
         ConversionMismatchException => "A conferência encontrou diferença nos dados convertidos. O original e o backup foram preservados. Pode existir uma cópia no Google; consulte a recuperação antes de repetir.",

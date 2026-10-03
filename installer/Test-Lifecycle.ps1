@@ -18,6 +18,9 @@ function Defaults-Snapshot {
         "$extension-default:$default"; "$extension-choice:$choice"
     }
 }
+function Assert-NoLauncherUI {
+    if (@(Get-Process -Name SheetsWindows -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 }).Count -gt 0) { throw 'Silent installation launched interactive UI' }
+}
 function Current-Uninstaller {
     $key = 'HKCU:/Software/Microsoft/Windows/CurrentVersion/Uninstall/{D970FA65-0364-4F10-A6AA-D4302F31B607}_is1'
     $command = (Get-ItemProperty $key).UninstallString
@@ -30,6 +33,7 @@ $oldSetup = (Resolve-Path 'artifacts/installer-old/ZagoSheetsWin-Setup-win-x64.e
 $setup = (Resolve-Path 'artifacts/installer/ZagoSheetsWin-Setup-win-x64.exe').Path
 Write-Host 'Running installer'
 Run-Checked $oldSetup '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART'
+Assert-NoLauncherUI
 $exe = Join-Path $installed 'SheetsWindows.exe'
 if ((Get-ItemProperty 'HKCU:/Software/Microsoft/Windows/CurrentVersion/Uninstall/{D970FA65-0364-4F10-A6AA-D4302F31B607}_is1').DisplayName -ne 'ZagoSheetsWin') { throw 'Product name incorrect' }
 if (!(Test-Path $exe)) { throw 'Executable not installed' }
@@ -47,12 +51,13 @@ $shortcut = Join-Path $env:RUNNER_TEMP 'preserved.url'
 $shortcutBefore = [IO.File]::ReadAllText($shortcut)
 Write-Host 'Running installer'
 Run-Checked $setup '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART'
+Assert-NoLauncherUI
 # The previous-version package uses the same payload to exercise installer version policy.
 $key = 'HKCU:/Software/Microsoft/Windows/CurrentVersion/Uninstall/{D970FA65-0364-4F10-A6AA-D4302F31B607}_is1'
-if ((Get-ItemProperty $key).DisplayVersion -ne '0.9.3') { throw 'Upgrade version missing' }
+if ((Get-ItemProperty $key).DisplayVersion -ne '0.9.4') { throw 'Upgrade version missing' }
 $reject = Start-Process -FilePath $oldSetup -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART' -PassThru
 if (!$reject.WaitForExit(120000)) { $reject.Kill(); throw 'Downgrade rejection timed out' }
-if ($reject.ExitCode -eq 0 -or (Get-ItemProperty $key).DisplayVersion -ne '0.9.3') { throw 'Downgrade was not blocked' }
+if ($reject.ExitCode -eq 0 -or (Get-ItemProperty $key).DisplayVersion -ne '0.9.4') { throw 'Downgrade was not blocked' }
 Write-Host 'Running registered uninstaller'
 Run-Checked (Current-Uninstaller) '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART'
 if (Test-Path $exe) { throw 'Installed executable remains' }
@@ -63,6 +68,7 @@ if (Compare-Object $before (Defaults-Snapshot)) { throw 'Windows defaults change
 # Reinstall and remove again demonstrates retained state does not block maintenance.
 Write-Host 'Running installer'
 Run-Checked $setup '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART'
+Assert-NoLauncherUI
 Write-Host 'Running registered uninstaller'
 Run-Checked (Current-Uninstaller) '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART'
 Write-Host 'Per-user install, upgrade, uninstall and reinstall passed; backups, state, shortcut and Windows defaults preserved.'

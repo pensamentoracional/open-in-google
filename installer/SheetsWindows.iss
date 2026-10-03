@@ -1,5 +1,5 @@
 #ifndef PilotVersion
-  #define PilotVersion "0.9.3"
+  #define PilotVersion "0.9.4"
 #endif
 [Setup]
 AppId={{D970FA65-0364-4F10-A6AA-D4302F31B607}
@@ -25,8 +25,8 @@ OutputBaseFilename=ZagoSheetsWin-Setup-win-x64
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
-LicenseFile=..\LICENSE
-InfoBeforeFile=..\branding\CREDITS.txt
+DisableWelcomePage=yes
+DisableReadyPage=yes
 UninstallDisplayIcon={app}\SheetsWindows.exe
 CloseApplications=yes
 
@@ -39,7 +39,7 @@ Name: "{group}\Restaurar backups"; Filename: "{app}\SheetsWindows.exe"; Paramete
 Name: "{group}\Desinstalar ZagoSheetsWin"; Filename: "{uninstallexe}"
 
 [Run]
-Filename: "{app}\SheetsWindows.exe"; Description: "Configurar ZagoSheetsWin"; Flags: postinstall nowait skipifsilent
+Filename: "{app}\SheetsWindows.exe"; Parameters: "--first-use"; Flags: nowait skipifsilent
 
 [Code]
 function PrepareToInstall(var NeedsRestart: Boolean): String;

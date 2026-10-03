@@ -17,7 +17,7 @@ internal sealed class LauncherForm : Form
         this.request = request; Text = "ZagoSheetsWin"; ClientSize = new Size(900, 400); MinimumSize = new Size(760, 340);
         StartPosition = FormStartPosition.CenterScreen; AutoScaleMode = AutoScaleMode.Dpi;
         var buttons = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, Padding = new Padding(12), FlowDirection = FlowDirection.LeftToRight };
-        var setup = new Button { Text = "Configurar piloto", AutoSize = true };
+        var setup = new Button { Text = "Configurações", AutoSize = true };
         var recovery = new Button { Text = "Recuperar operação / backup", AutoSize = true };
         setup.Click += (_, _) => { if (!busy) { using var form = new SetupForm(); form.ShowDialog(this); } };
         recovery.Click += (_, _) => { if (!busy) { using var form = new RecoveryForm(); form.ShowDialog(this); } };
