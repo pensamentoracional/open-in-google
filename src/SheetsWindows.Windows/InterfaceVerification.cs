@@ -35,6 +35,24 @@ internal static class InterfaceVerification
             foreach (var button in Descendants(recovery).OfType<Button>().Where(b => b.Visible)) Require(button.Bottom <= button.Parent!.ClientSize.Height && button.Right <= button.Parent.ClientSize.Width, "Backup actions must fit their container.");
             recovery.Hide();
         }
+        using (var setup = new SetupForm())
+        {
+            setup.Show(); Application.DoEvents();
+            var advanced = Descendants(setup).OfType<Button>().Single(b => b.Text == "Opções avançadas…");
+            var dialog = setup.AdvancedDialog;
+            var close = dialog.Controls.OfType<Button>().Single(b => b.Text == "Fechar");
+            var checkedModal = false;
+            dialog.Shown += (_, _) => dialog.BeginInvoke((Action)(() =>
+            {
+                checkedModal = dialog.Modal && dialog.Owner == setup && close.Visible && close.Bottom <= dialog.ClientSize.Height;
+                close.PerformClick();
+            }));
+            advanced.PerformClick();
+            Require(checkedModal && setup.Enabled && !dialog.Visible, "Advanced settings must be modal, keep Close visible and restore the owner after closing.");
+            advanced.PerformClick();
+            Require(!dialog.IsDisposed && setup.Enabled, "Advanced settings must reopen after closing.");
+            setup.Hide();
+        }
         using (var tutorial = new TutorialForm())
         {
             tutorial.Show(); Application.DoEvents();

@@ -10,7 +10,8 @@ internal sealed class SetupForm : Form
     private readonly Label status = new() { AutoSize = true, MaximumSize = new Size(570, 0) };
     private readonly CancellationTokenSource cancellation = new();
     private bool busy;
-    public SetupForm(bool firstUse = false, bool expanded = false)
+    internal Form AdvancedDialog { get; private set; } = null!;
+    public SetupForm(bool firstUse = false)
     {
         var storage = LocalStorage.ForCurrentUser();
         Text = firstUse ? "Primeiro uso — ZagoSheetsWin" : "Configurações — ZagoSheetsWin";
@@ -26,13 +27,20 @@ internal sealed class SetupForm : Form
         var policy = PilotSetup.PolicyPath(storage); if (File.Exists(policy)) { folder.Text = File.ReadAllText(policy); chooseFolder.Enabled = false; }
         var consent = new CheckBox { AutoSize = true, Checked = configured, Text = "Confirmo que a pasta é local e aceito substituir o original por um atalho, com backup." };
         layout.Controls.Add(consent);
-        var advanced = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false, Visible = expanded, MaximumSize = new Size(590, 0) };
-        var toggle = new Button { AutoSize = true, Text = expanded ? "Opções avançadas ▾" : "Opções avançadas ▸" };
-        toggle.Click += (_, _) => { advanced.Visible = !advanced.Visible; toggle.Text = advanced.Visible ? "Opções avançadas ▾" : "Opções avançadas ▸"; };
+        var advanced = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoScroll = true, Padding = new Padding(18), FlowDirection = FlowDirection.TopDown, WrapContents = false };
+        var advancedDialog = new Form { Text = "Opções avançadas — ZagoSheetsWin", ClientSize = new Size(550, 640), MinimumSize = new Size(480, 480), StartPosition = FormStartPosition.CenterParent, AutoScaleMode = AutoScaleMode.Dpi, ShowInTaskbar = false, MinimizeBox = false };
+        var closeAdvanced = new Button { Text = "Fechar", Dock = DockStyle.Bottom, Height = 44 };
+        advancedDialog.Controls.Add(advanced); advancedDialog.Controls.Add(closeAdvanced);
+        closeAdvanced.Click += (_, _) => advancedDialog.Close();
+        AdvancedDialog = advancedDialog;
+        advancedDialog.CancelButton = closeAdvanced;
+        Disposed += (_, _) => advancedDialog.Dispose();
+        var toggle = new Button { AutoSize = true, Text = "Opções avançadas…" };
+        toggle.Click += (_, _) => advancedDialog.ShowDialog(this);
 
         advanced.Controls.Add(Info("Conexão Google\nO aplicativo já inclui a configuração de conexão. Cada pessoa entra com sua própria conta. Um JSON próprio é opcional. A configuração existente é mantida."));
         var chooseClient = new Button { AutoSize = true, Text = "Escolher arquivo JSON de conexão…", Enabled = !File.Exists(LauncherConfiguration.ClientPath(storage)) };
-        chooseClient.Click += (_, _) => { using var dialog = new OpenFileDialog { Filter = "JSON OAuth|*.json", CheckFileExists = true }; if (dialog.ShowDialog(this) == DialogResult.OK)  { client.Text = dialog.FileName; advanced.Visible = false; toggle.Text = "Opções avançadas ▸"; status.Text = "JSON selecionado. Clique em Salvar e conectar Google."; } };
+        chooseClient.Click += (_, _) => { using var dialog = new OpenFileDialog { Filter = "JSON OAuth|*.json", CheckFileExists = true }; if (dialog.ShowDialog(this) == DialogResult.OK)  { client.Text = dialog.FileName;  status.Text = "JSON selecionado. Clique em Salvar e conectar Google."; } };
         advanced.Controls.Add(chooseClient); advanced.Controls.Add(client);
         if (File.Exists(LauncherConfiguration.ClientPath(storage))) client.Text = "Configuração de conexão existente mantida.";
         var extended = new CheckBox { AutoSize = true, Checked = true, Text = "Habilitar CSV, TSV, XLS e ODS (experimental)." };
@@ -50,6 +58,8 @@ internal sealed class SetupForm : Form
         var saveXls = new Button { AutoSize = true, Text = "Salvar escolha para arquivos XLS" };
         saveXls.Click += async (_, _) => { saveXls.Enabled = false; try { await XlsReplacementSettings.SaveAsync(storage, xls.Checked); status.Text = "Preferência XLS salva."; } catch (Exception ex) when (LauncherErrors.Expected(ex)) { status.Text = LauncherErrors.Message(ex); } finally { saveXls.Enabled = true; } };
         advanced.Controls.Add(saveXls);
+        var advancedStatus = Ui.Text(""); advanced.Controls.Add(advancedStatus);
+        status.TextChanged += (_, _) => advancedStatus.Text = status.Text;
         layout.Controls.Add(Ui.Separator()); layout.Controls.Add(Ui.Text("2. Conta Google", true)); layout.Controls.Add(Info( (FirstUseState.NeedsAuthorization(storage) ? "Clique em Salvar e conectar Google. No navegador, escolha sua conta e autorize o acesso. Depois, volte aqui." : "Google conectado. Sua configuração foi mantida.") + " As planilhas ficam no seu Drive."));
         var connect = new Button { AutoSize = true, Text = "Salvar e conectar Google" };
         var save = new Button { AutoSize = true, Text = "Salvar configurações" };
@@ -88,11 +98,11 @@ internal sealed class SetupForm : Form
         Ui.Primary(FirstUseState.NeedsAuthorization(storage) ? connect : save); layout.Controls.Add(Ui.Separator()); layout.Controls.Add(connect); if (!firstUse) layout.Controls.Add(save);
         layout.Controls.Add(Ui.Separator()); layout.Controls.Add(Ui.Text("3. Quer abrir com dois cliques?", true)); layout.Controls.Add(Info("Nos Aplicativos padrão do Windows, escolha ZagoSheetsWin para CSV, XLS e XLSX. Depois, volte aqui.\n\nEssa escolha é opcional. Você também pode usar Abrir com → ZagoSheetsWin ou Abrir planilha no aplicativo.\n\nTSV também disponível. ODS experimental."));
         defaults.Click += (_, _) => { try { new BrowserLauncher().Open(WindowsAssociationPlan.DefaultsUri); } catch (Exception ex) when (LauncherErrors.Expected(ex)) { status.Text = "Abra Configurações > Aplicativos > Aplicativos padrão e procure ZagoSheetsWin."; } };
-        layout.Controls.Add(defaults); layout.Controls.Add(Ui.Separator()); layout.Controls.Add(toggle); layout.Controls.Add(advanced); layout.Controls.Add(status); layout.Controls.Add(finish);
+        layout.Controls.Add(defaults); layout.Controls.Add(Ui.Separator()); layout.Controls.Add(toggle);  layout.Controls.Add(status); 
         finish.Click += (_, _) => Close();
-        Controls.Add(layout); Controls.Add(cancel); cancel.Dock = DockStyle.Bottom;
+        Controls.Add(layout); Controls.Add(finish); finish.Dock = DockStyle.Bottom; finish.Height = 44; Controls.Add(cancel); cancel.Dock = DockStyle.Bottom;
         FormClosing += (_, e) => { if (busy) { e.Cancel = true; cancellation.Cancel(); } };
-        Branding.Apply(this); Ui.Adapt(layout); Ui.Adapt(advanced);
+        Branding.Apply(this); Branding.Apply(advancedDialog); Ui.Adapt(layout); Ui.Adapt(advanced);
     }
     protected override void Dispose(bool disposing) { if (disposing) cancellation.Dispose(); base.Dispose(disposing); }
 }

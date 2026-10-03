@@ -1,5 +1,5 @@
 #ifndef PilotVersion
-  #define PilotVersion "0.9.10"
+  #define PilotVersion "0.9.11"
 #endif
 [Setup]
 AppId={{D970FA65-0364-4F10-A6AA-D4302F31B607}
@@ -39,7 +39,7 @@ Name: "{group}\Restaurar backups"; Filename: "{app}\SheetsWindows.exe"; Paramete
 Name: "{group}\Desinstalar ZagoSheetsWin"; Filename: "{uninstallexe}"
 
 [Run]
-Filename: "{app}\SheetsWindows.exe"; Parameters: "--first-use"; Flags: nowait skipifsilent
+Filename: "{app}\SheetsWindows.exe"; Parameters: "--first-use"; Flags: nowait postinstall skipifsilent
 
 [Code]
 function PrepareToInstall(var NeedsRestart: Boolean): String;
@@ -96,4 +96,14 @@ begin
   Credit.WordWrap := True;
   Credit.Height := ScaleY(24);
   Credit.Font.Size := 7;
+end;
+
+procedure CurPageChanged(CurPageID: Integer);
+begin
+  if CurPageID = wpFinished then
+  begin
+    WizardForm.NextButton.Caption := 'Run Setup';
+    WizardForm.RunList.Checked[0] := True;
+    WizardForm.RunList.Visible := False;
+  end;
 end;

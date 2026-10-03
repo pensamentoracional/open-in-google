@@ -28,10 +28,11 @@ public static class WindowsAssociationPlan
         return "\"" + Path.GetFullPath(exe) + "\" --open \"%1\"";
     }
     public sealed record Value(string Key, string Name, object Data, AssociationValueKind Kind);
-    public static IReadOnlyList<Value> Values(string exe, bool legacy = false)
+    public static IReadOnlyList<Value> Values(string exe, bool legacy = false, bool legacyIcon = false)
     {
         var name = legacy ? LegacyName : AppName;
         var command = Command(exe); var full = Path.GetFullPath(exe);
+        var fileIcon = legacy || legacyIcon ? full : Path.Combine(Path.GetDirectoryName(full)!, "sheet-shortcut.ico");
         List<Value> values = [
             new(AppRoot, "SW_Owner", Owner, AssociationValueKind.String), new(AppRoot, "SW_Executable", full, AssociationValueKind.String),
             new(ProgRoot, "SW_Owner", Owner, AssociationValueKind.String), new(ProgRoot, "SW_Executable", full, AssociationValueKind.String),
@@ -41,7 +42,7 @@ public static class WindowsAssociationPlan
             new(CapabilityPath, "ApplicationIcon", "\"" + full + "\",0", AssociationValueKind.String),
             new(CapabilityPath + @"\FileAssociations", ".xlsx", ProgId, AssociationValueKind.String),
             new(ProgRoot, "", "Planilha no Google Sheets", AssociationValueKind.String), new(ProgRoot, "FriendlyTypeName", "Planilha no Google Sheets", AssociationValueKind.String),
-            new(ProgRoot + @"\DefaultIcon", "", "\"" + full + "\",0", AssociationValueKind.String),
+            new(ProgRoot + @"\DefaultIcon", "", "\"" + fileIcon + "\",0", AssociationValueKind.String),
             new(ProgRoot + @"\shell\open\command", "", command, AssociationValueKind.String),
             new(ExecutableRoot, "FriendlyAppName", name, AssociationValueKind.String),
             new(ExecutableRoot + @"\SupportedTypes", ".xlsx", "", AssociationValueKind.String),
@@ -82,7 +83,7 @@ public sealed class WindowsAssociationRegistration(RegistryKey userRoot)
             if (key.GetValue("SW_Executable") is string prior)
             {
                 if (!string.Equals(prior, Path.GetFullPath(exe), StringComparison.OrdinalIgnoreCase)) throw new LocalConflictException("Unregister before moving the executable.");
-                old[root] = WindowsAssociationPlan.Values(prior, legacy: true);
+                old[root] = WindowsAssociationPlan.Values(prior, legacy: true).Concat(WindowsAssociationPlan.Values(prior, legacyIcon: true)).ToArray();
             }
         }
         foreach (var value in plan)
@@ -90,7 +91,7 @@ public sealed class WindowsAssociationRegistration(RegistryKey userRoot)
             using var key = userRoot.OpenSubKey(value.Key);
             if (key is null || !key.GetValueNames().Contains(value.Name, StringComparer.OrdinalIgnoreCase) || Matches(key, value)) continue;
             var ownerRoot = WindowsAssociationPlan.OwnedRoots.FirstOrDefault(r => value.Key == r || value.Key.StartsWith(r + "\\", StringComparison.OrdinalIgnoreCase));
-            var previous = ownerRoot is not null && old.TryGetValue(ownerRoot, out var priorPlan) ? priorPlan.SingleOrDefault(v => v.Key == value.Key && v.Name == value.Name) : null;
+            var previous = ownerRoot is not null && old.TryGetValue(ownerRoot, out var priorPlan) ? priorPlan.FirstOrDefault(v => v.Key == value.Key && v.Name == value.Name && Matches(key, v)) : null;
             if (previous is null || !Matches(key, previous)) throw new LocalConflictException("Registry value changed; registration blocked.");
         }
         using (var apps = userRoot.OpenSubKey(WindowsAssociationPlan.RegisteredApps))
@@ -117,7 +118,7 @@ public sealed class WindowsAssociationRegistration(RegistryKey userRoot)
         if (main is null) return;
         if (!Equals(main.GetValue("SW_Owner"), WindowsAssociationPlan.Owner)) throw new LocalConflictException("Registration is not owned by this app.");
         var exe = main.GetValue("SW_Executable") as string ?? throw new LocalConflictException("Incomplete registration; re-register first.");
-        var plan = WindowsAssociationPlan.Values(exe).Concat(WindowsAssociationPlan.Values(exe, legacy: true)).ToArray();
+        var plan = WindowsAssociationPlan.Values(exe).Concat(WindowsAssociationPlan.Values(exe, legacy: true)).Concat(WindowsAssociationPlan.Values(exe, legacyIcon: true)).ToArray();
         foreach (var root in WindowsAssociationPlan.OwnedRoots)
         {
             using var key = userRoot.OpenSubKey(root);

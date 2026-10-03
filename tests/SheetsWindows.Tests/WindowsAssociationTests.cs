@@ -11,6 +11,24 @@ namespace SheetsWindows.Tests;
 public sealed class WindowsAssociationTests
 {
     [WindowsFact]
+    public void ExistingExecutableIconMigratesToShortcutIconAndUnregisters()
+    {
+        using var f = new Hive();
+        foreach (var value in WindowsAssociationPlan.Values(f.Exe, legacyIcon: true))
+        {
+            using var key = f.Root.CreateSubKey(value.Key);
+            key.SetValue(value.Name, value.Data, value.Kind == AssociationValueKind.String ? RegistryValueKind.String : RegistryValueKind.None);
+        }
+        var registration = new WindowsAssociationRegistration(f.Root);
+        registration.Register(f.Exe);
+        registration.Register(f.Exe);
+        using (var icon = f.Root.OpenSubKey(WindowsAssociationPlan.ProgRoot + @"\DefaultIcon"))
+            Assert.Equal("\"" + Path.Combine(Path.GetDirectoryName(f.Exe)!, "sheet-shortcut.ico") + "\",0", icon!.GetValue(""));
+        registration.Unregister();
+        Assert.Null(f.Root.OpenSubKey(WindowsAssociationPlan.ProgRoot));
+    }
+
+    [WindowsFact]
     public void LegacyNameMigratesOnlyOwnedValuesAndPreservesDefaults()
     {
         using var f = new Hive();
