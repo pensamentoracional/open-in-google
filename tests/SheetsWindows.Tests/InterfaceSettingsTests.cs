@@ -45,6 +45,16 @@ public sealed class InterfaceSettingsTests
         Assert.DoesNotContain("secret.csv", File.ReadAllText(scrubbed)); Assert.DoesNotContain("private", File.ReadAllText(scrubbed));
     }
     [Fact]
+    public async Task CpuSamplesUseBoundedIntervalsAndRejectNonFiniteMetrics()
+    {
+        var telemetry = new ProcessingTelemetry(); telemetry.SampleCpu(); telemetry.SampleCpu();
+        Assert.Null(telemetry.Capture().PeakCpuPercent);
+        await Task.Delay(120); telemetry.SampleCpu();
+        Assert.InRange(telemetry.Capture().PeakCpuPercent!.Value, 0, 100);
+        Assert.False(new ProcessingMetrics(0, null, null, null, null, null, null, double.NaN).IsValid);
+        Assert.False(new ProcessingMetrics(0, null, null, null, null, null, null, 101).IsValid);
+    }
+    [Fact]
     public async Task InvalidMetricsCannotBeExported()
     {
         using var w = new Workspace(); var storage = new LocalStorage(Path.Combine(w.Root, "interface"));

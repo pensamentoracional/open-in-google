@@ -53,7 +53,9 @@ internal sealed class ProcessingForm : Form
     {
         busy = true;
         var progress = new Progress<string>(text => { if (!IsDisposed && !Disposing && busy && !cancellation.IsCancellationRequested) status.Text = text; });
-        var telemetry = new ProcessingTelemetry(startedAt, progress); telemetry.MarkReady();
+        var telemetry = new ProcessingTelemetry(startedAt, progress); telemetry.MarkReady(); telemetry.SampleCpu();
+        using var cpuSampler = new System.Windows.Forms.Timer { Interval = 100 };
+        cpuSampler.Tick += (_, _) => telemetry.SampleCpu(); cpuSampler.Start();
         var diagnostics = new DiagnosticLog(LocalStorage.ForCurrentUser());
         var outcome = DiagnosticEvent.Completed;
         if (recordDiagnostics) await diagnostics.RecordAsync(DiagnosticEvent.Started);
@@ -81,6 +83,7 @@ internal sealed class ProcessingForm : Form
         }
         finally
         {
+            cpuSampler.Stop();
             LastMetrics = telemetry.Capture();
             if (recordDiagnostics) await diagnostics.RecordAsync(outcome, metrics: LastMetrics);
             busy = false;

@@ -3,10 +3,11 @@ using System.Diagnostics;
 namespace SheetsWindows.Infrastructure;
 
 public enum ProcessingPhase { Conversion, Upload, Verification }
-public sealed record ProcessingMetrics(long ElapsedMs, long? ReadyMs, long? ConversionMs, long? UploadMs, long? VerificationMs, long? PeakWorkingSetBytes, long? CpuMs)
+public sealed record ProcessingMetrics(long ElapsedMs, long? ReadyMs, long? ConversionMs, long? UploadMs, long? VerificationMs, long? PeakWorkingSetBytes, long? CpuMs, double? PeakCpuPercent = null)
 {
     [System.Text.Json.Serialization.JsonIgnore]
-    public bool IsValid => ElapsedMs >= 0 && ReadyMs is null or >= 0 && ConversionMs is null or >= 0 && UploadMs is null or >= 0 && VerificationMs is null or >= 0 && PeakWorkingSetBytes is null or >= 0 && CpuMs is null or >= 0;
+    public bool IsValid => ElapsedMs >= 0 && ReadyMs is null or >= 0 && ConversionMs is null or >= 0 && UploadMs is null or >= 0 && VerificationMs is null or >= 0 && PeakWorkingSetBytes is null or >= 0 && CpuMs is null or >= 0
+        && (PeakCpuPercent is null || double.IsFinite(PeakCpuPercent.Value) && PeakCpuPercent is >= 0 and <= 100);
 }
 // Numeric, per-run counters only. No source path, account, content or upload URL.
 public sealed class ProcessingTelemetry(long? startedAt = null, IProgress<string>? progress = null)
@@ -16,6 +17,24 @@ public sealed class ProcessingTelemetry(long? startedAt = null, IProgress<string
     private readonly int[] observed = new int[3];
     private long ready = -1;
     private readonly TimeSpan? initialCpu = Cpu();
+    private readonly object cpuGate = new();
+    private TimeSpan? previousCpu;
+    private long previousCpuAt;
+    private double? peakCpu;
+    // UI timer calls this every ~100 ms. Percent is normalized to all logical processors.
+    public void SampleCpu()
+    {
+        lock (cpuGate)
+        {
+            var now = Stopwatch.GetTimestamp(); var value = Cpu();
+            if (value is null) return;
+            if (previousCpu is null) { previousCpu = value; previousCpuAt = now; return; }
+            var elapsed = (now - previousCpuAt) * 1000.0 / Stopwatch.Frequency;
+            if (elapsed < 80) return; // Avoid reporting short, quantized CPU-clock spikes.
+            var percent = Math.Clamp((value.Value - previousCpu.Value).TotalMilliseconds / elapsed * 100 / Environment.ProcessorCount, 0, 100);
+            peakCpu = Math.Max(peakCpu ?? 0, percent); previousCpu = value; previousCpuAt = now;
+        }
+    }
     private static TimeSpan? Cpu() { try { using var p = Process.GetCurrentProcess(); return p.TotalProcessorTime; } catch (Exception ex) when (LauncherErrors.Expected(ex)) { return null; } }
     public void MarkReady() => Interlocked.CompareExchange(ref ready, Stopwatch.GetTimestamp() - started, -1);
     public IDisposable Begin(ProcessingPhase phase)
@@ -38,6 +57,7 @@ public sealed class ProcessingTelemetry(long? startedAt = null, IProgress<string
         catch (Exception ex) when (LauncherErrors.Expected(ex)) { }
         long? Stage(int index) => Volatile.Read(ref observed[index]) == 0 ? null : Ms(Interlocked.Read(ref ticks[index]));
         var readyTicks = Interlocked.Read(ref ready);
-        return new(Ms(Stopwatch.GetTimestamp() - started), readyTicks < 0 ? null : Ms(readyTicks), Stage(0), Stage(1), Stage(2), memory, cpu);
+        double? peak; lock (cpuGate) peak = peakCpu;
+        return new(Ms(Stopwatch.GetTimestamp() - started), readyTicks < 0 ? null : Ms(readyTicks), Stage(0), Stage(1), Stage(2), memory, cpu, peak);
     }
 }
