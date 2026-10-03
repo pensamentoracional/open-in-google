@@ -1,6 +1,6 @@
 # Próxima evolução alpha — ZagoSheetsWin
 
-Decisões e prioridades alinhadas com Fernando em 03/10/2026. Este documento descreve trabalho aprovado e propostas; não declara implementação nem homologação concluídas. Pacote aprovado: 0.9.2 (etapa 1); CI Windows/Linux e instalador aprovados. Teste Google real desta correção permanece pendente.
+Decisões e prioridades alinhadas com Fernando em 03/10/2026. Este documento descreve trabalho aprovado e propostas; não declara implementação nem homologação concluídas. Pacote aprovado: 0.9.3 (etapas 1 e 2); CI Windows/Linux e instalador aprovados. Teste Google real desta correção permanece pendente.
 
 ## Evidências do piloto real
 
@@ -19,7 +19,7 @@ Implementada na versão 0.9.2; evidências e limites em [ALPHA_1_CSV.md](ALPHA_1
 
 ## 2. XLS com substituição por padrão
 
-Implementada em 0.9.3, com ícone dos novos atalhos; ver [ALPHA_2_XLS.md](ALPHA_2_XLS.md). CI e aceite real pendentes.
+Implementada em 0.9.3, com ícone dos novos atalhos; ver [ALPHA_2_XLS.md](ALPHA_2_XLS.md). CI e instalador aprovados; aceite real pendente.
 
 - Opção de substituir XLS por atalho deve vir marcada por padrão e ser acessível nas configurações. Permitir desmarcar para importar cópia.
 - Aplicar backup, conversão, conferência, publicação do atalho e retirada somente após sucesso; configurar a escolha uma vez, não a cada arquivo.
@@ -45,7 +45,7 @@ Implementada em 0.9.3, com ícone dos novos atalhos; ver [ALPHA_2_XLS.md](ALPHA_
 ## 5. Atalhos com ícone próprio
 
 - Os atalhos atuais são arquivos .url (InternetShortcut), não páginas HTML; implementar IconFile/IconIndex usando .ico fornecido por Fernando.
-- Ícone fornecido por Fernando recebido e validado (16 a 256 pixels); integração e validação no Explorer ainda pendentes. Não substituir o logo por uma imagem presumida.
+- Ícone fornecido por Fernando recebido e validado (16 a 256 pixels); integrado aos novos atalhos na 0.9.3; aparência/cache no Explorer ainda aguarda aceite manual. Não substituir o logo por uma imagem presumida.
 - Guardar ícone em caminho local persistente e estável para que atalhos sobrevivam a atualizações/desinstalação; não depender de arquivo temporário ou da pasta de programa removida.
 - Preservar URL, codificação, nomes e publicação atômica. Validar Explorer Windows 11 e comportamento com cache de ícones; considerar atualização explícita dos atalhos existentes.
 

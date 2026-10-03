@@ -20,6 +20,10 @@ Atalhos antigos sem ícone mantêm seus bytes para permitir recuperação sem co
 
 Suite local Linux: 151 aprovados, 30 testes exclusivos Windows ignorados, zero falhas. Regressões cobrem leitura/conferência XLS, preferência padrão e alteração sem mudar CSV, configurações inválidas, recurso de ícone estável e recuperação de atalho legado. Testes Windows cobrem retirada XLS com backup íntegro e ícone, modo cópia desmarcado, divergência com original conservado e retomada do mesmo upload após habilitar novamente. Instalador verifica preservação dos arquivos de preferência e ícone.
 
-Versão 0.9.3; CI Windows/Linux, instalador e prévia de configurações aguardando aprovação. XLS no Google real e aparência do ícone no Explorer ficam para a validação final.
+Versão 0.9.3 aprovada no [CI 37096149671](https://github.com/zagozago/ZagoSheetsWin/actions/runs/37096149671), commit `fb602fee663ded5e1789d21dd8d2a70d36ceac50`: 180 testes Windows aprovados / 1 exclusivo Unix ignorado; Linux 151 aprovados / 30 exclusivos Windows ignorados. Zero falhas. Build, pacote, instalação, atualização, rejeição de downgrade e preservação de estado na desinstalação aprovados. Prévia nativa revisada: opção marcada e aviso completo sem cortes.
+
+## Pacote aprovado
+
+[Baixar instalador alpha 0.9.3 — Windows x64](https://github.com/zagozago/ZagoSheetsWin/actions/runs/37096149671/artifacts/11264247583). ZIP contém `ZagoSheetsWin-Setup-win-x64.exe`; SHA-256 do ZIP: `0dde325d20476523650f99277adca87badc50189d50ba84fca6184d4bf50eb04`. Download exige login no GitHub; retenção até 01/01/2027. Atualização preserva configuração, autorização, backups e a escolha XLS já salva. XLS no Google real e aparência do ícone no Explorer ficam para a validação final.
 
 Gestão de backup 30 dias / 200 MB (máximo configurável 1 GB), temas com claro inicial, wizard simplificado e OAuth de distribuição continuam planejados nas próximas etapas.
