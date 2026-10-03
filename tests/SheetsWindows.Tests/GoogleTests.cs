@@ -220,6 +220,30 @@ public sealed class GoogleTests
         Assert.NotNull(copyMetrics.Capture().ConversionMs); Assert.NotNull(copyMetrics.Capture().UploadMs); Assert.Null(copyMetrics.Capture().VerificationMs);
     }
     [WindowsFact]
+    public async Task XlsFormulaVerificationOpensSameUploadAsCopyAndPreservesOriginal()
+    {
+        using var w = new Workspace(); var path = Path.ChangeExtension(w.Source, ".xls"); var bytes = FormatTests.Xls();
+        File.WriteAllBytes(path, bytes); ConfigureLauncher(w, out var storage);
+        var export = SpreadsheetFormats.WriteXlsx(SpreadsheetFormats.ReadExcel(bytes, binary: true));
+        using var stream = new MemoryStream(); stream.Write(export); stream.Position = 0;
+        using (var zip = new System.IO.Compression.ZipArchive(stream, System.IO.Compression.ZipArchiveMode.Update, true))
+        {
+            var entry = zip.GetEntry("xl/worksheets/sheet1.xml")!;
+            System.Xml.Linq.XDocument sheet; using (var input = entry.Open()) sheet = System.Xml.Linq.XDocument.Load(input);
+            var ns = sheet.Root!.Name.Namespace;
+            sheet.Descendants(ns + "c").First().AddFirst(new System.Xml.Linq.XElement(ns + "f", "1+1"));
+            entry.Delete(); using var output = zip.CreateEntry("xl/worksheets/sheet1.xml").Open(); sheet.Save(output);
+        }
+        using var server = new DriveServer { ExportOverride = stream.ToArray() }; using var http = new HttpClient(server);
+        var launcher = new WindowsLauncher(storage, http, new LauncherBrowser());
+        var shortcut = await launcher.OpenAsync(path);
+        Assert.Equal(bytes, File.ReadAllBytes(path)); Assert.True(File.Exists(shortcut)); Assert.NotNull(launcher.ImportNotice);
+        Assert.Equal(2, server.Posts); Assert.Equal(1, server.Exports);
+        Assert.Equal(shortcut, await launcher.OpenAsync(path)); Assert.Equal(2, server.Posts);
+        Assert.Equal(bytes, File.ReadAllBytes(Assert.Single(w.Registry().Pending()).Snapshot!.BackupPath));
+    }
+
+    [WindowsFact]
     public async Task XlsMismatchPreservesOriginalAndResumesSameUpload()
     {
         using var w = new Workspace(); var path = Path.ChangeExtension(w.Source, ".xls"); var bytes = FormatTests.Xls(); File.WriteAllBytes(path, bytes); ConfigureLauncher(w, out var storage);

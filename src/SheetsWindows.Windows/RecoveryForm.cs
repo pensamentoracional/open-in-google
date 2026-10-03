@@ -70,7 +70,7 @@ internal sealed class RecoveryForm : Form
                 await RefreshEntries();
                 status.Text = replace ? "Substituição concluída. Backup privado conservado." : "Cópia aberta no Google. Original conservado.";
             }
-            catch (Exception ex) when (LauncherErrors.Expected(ex)) { await diagnostics.RecordAsync(DiagnosticLog.Failure(ex), entry.Id); status.Text = LauncherErrors.Message(ex); }
+            catch (Exception ex) when (LauncherErrors.Expected(ex)) { await diagnostics.RecordAsync(DiagnosticLog.Failure(ex), entry.Id, failure: ex); status.Text = LauncherErrors.Message(ex); }
             finally { activeCancellation = null; cancel.Enabled = false; cancel.Visible = false; busy = false; actions.Enabled = true; restore.Enabled = true; entries.Enabled = true; }
         }
         copy.Click += async (_, _) => await Resume(false);

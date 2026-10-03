@@ -97,8 +97,10 @@ public static class LauncherErrors
         LauncherNotConfiguredException => "Conclua o primeiro uso antes de abrir planilhas. Abra o ZagoSheetsWin ou suas Configurações para escolher a pasta e conectar ao Google.",
         AuthorizationRequiredException => "O Google precisa de autorização. Abra Configurações e clique em Salvar e conectar Google; depois abra a planilha novamente.",
         ReconciliationRequiredException => "A importação aguarda reconciliação. Não repita o upload manualmente. Consulte o guia de recuperação.",
+        FormulaVerificationException => "A planilha convertida contém fórmulas que o aplicativo ainda não consegue conferir. O original e o backup foram preservados. Em Recuperação / backups, selecione esta operação e use Retomar como cópia para abrir a planilha no Google sem repetir o envio.",
         ConversionMismatchException => "A conferência encontrou diferença nos dados convertidos. O original e o backup foram preservados. Pode existir uma cópia no Google; consulte a recuperação antes de repetir.",
         SpreadsheetCapacityException capacity => capacity.Message + " O original foi preservado. Divida a tabela em arquivos menores para tentar novamente.",
+        InvalidDataException data when data.Message is "Unsupported workbook content type." or "Ambiguous workbook content type." or "Invalid content types XML." => "Não foi possível identificar com segurança o formato interno do XLSX. O original foi preservado. Salve uma nova cópia como XLSX no Excel ou LibreOffice e tente essa cópia.",
         InvalidDataException data when data.Message is "Invalid text encoding or characters." or "Encoding conflicts with BOM." => "Não foi possível ler a codificação do CSV/TSV. Use UTF-8 ou UTF-16 com BOM; para arquivos antigos, selecione Windows-1252 nas opções de texto. O original foi preservado.",
         InvalidDataException data when data.Message == "Ambiguous CSV delimiter; configure it explicitly." => "O CSV pode usar vírgula ou ponto e vírgula. Escolha o separador nas opções de texto. O original foi preservado.",
         InvalidDataException data when data.Message is "Irregular delimited table." or "Invalid quoted field." or "Unclosed quoted field." or "Empty text spreadsheet." or "Empty table." => "O CSV/TSV está vazio ou contém linhas, separadores ou aspas inconsistentes. Confira o separador e a estrutura do arquivo. O original foi preservado.",
@@ -117,6 +119,7 @@ public static class LauncherErrors
 
 public sealed class WindowsLauncher(LocalStorage storage, HttpClient http, IBrowserLauncher browser, ProcessingTelemetry? telemetry = null)
 {
+    public string? ImportNotice { get; private set; }
     private GoogleOAuth Auth(OAuthClient client, FileOperationLock locks) => new(http, client,
         new DpapiTokenVault(System.IO.Path.Combine(storage.Root, "auth"), client.Id), new LoopbackAuthorizationReceiver(browser.Open), locks);
     public async Task LoginAsync(CancellationToken ct = default)
@@ -126,6 +129,7 @@ public sealed class WindowsLauncher(LocalStorage storage, HttpClient http, IBrow
     }
     public async Task<string> OpenAsync(string path, IProgress<string>? progress = null, CancellationToken ct = default)
     {
+        ImportNotice = null;
         // Local replacement is limited to the configured unsynced root.
         var request = LauncherRequest.Parse(["--open", path]);
         var client = await LauncherConfiguration.LoadClientAsync(storage, ct);
@@ -146,7 +150,13 @@ public sealed class WindowsLauncher(LocalStorage storage, HttpClient http, IBrow
         progress?.Report("Publicando atalho e concluindo substituição…");
         var coordinator = new ReplacementCoordinator(local, remote, new ManagedBackupStore(storage), locks,
             new ReplacementJournal(System.IO.Path.Combine(storage.Root, "replacement.db")), sources, browser, new ConversionVerifier(new GoogleDriveClient(http, auth), textOptions, telemetry), ShortcutIcon.Ensure(storage));
-        return await coordinator.ReplaceAsync(receipt, ct);
+        try { return await coordinator.ReplaceAsync(receipt, ct); }
+        catch (FormulaVerificationException) when (receipt.Operation.Format == "xls")
+        {
+            var shortcut = await PublishCopyAsync(receipt, progress, ct);
+            ImportNotice = "Sua planilha foi aberta no Google Sheets como cópia. Ela contém fórmulas que ainda não conseguimos conferir para substituir o arquivo. O original e o backup foram mantidos. O atalho da cópia está disponível na pasta de atalhos do aplicativo.";
+            return shortcut;
+        }
     }
     public async Task<string> CopyAsync(string path, IProgress<string>? progress = null, CancellationToken ct = default)
     {

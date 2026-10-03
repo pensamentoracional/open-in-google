@@ -167,6 +167,20 @@ public sealed class RobustnessTests
         await Assert.ThrowsAsync<IOException>(() => log.ExportAsync(destination));
     }
     [Fact]
+    public async Task DiagnosticsIdentifyWorkbookFailureWithoutExportingExceptionText()
+    {
+        using var w = new Workspace(); var storage = new LocalStorage(Path.Combine(w.Root, "state"));
+        var log = new DiagnosticLog(storage);
+        await log.RecordAsync(DiagnosticEvent.Failed, failure: new InvalidDataException("Unsupported workbook content type."));
+        await log.RecordAsync(DiagnosticEvent.Failed, failure: new IOException("private account / private file"));
+        var destination = Path.Combine(w.Root, "diagnostic-reasons.jsonl"); await log.ExportAsync(destination);
+        var entries = File.ReadAllLines(destination).Select(line => JsonSerializer.Deserialize<DiagnosticEntry>(line)!).ToArray();
+        Assert.Equal(DiagnosticFailure.WorkbookContentType, entries[0].Failure);
+        Assert.Equal(DiagnosticFailure.Other, entries[1].Failure);
+        Assert.DoesNotContain("private account", File.ReadAllText(destination));
+    }
+
+    [Fact]
     public async Task BrokenDiagnosticDirectoryDoesNotChangeOperationOutcome()
     {
         using var w = new Workspace(); var storage = new LocalStorage(Path.Combine(w.Root, "state")); Directory.CreateDirectory(storage.Root); File.WriteAllText(Path.Combine(storage.Root, "logs"), "blocked");

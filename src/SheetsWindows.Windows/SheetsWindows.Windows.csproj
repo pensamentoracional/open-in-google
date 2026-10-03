@@ -5,7 +5,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <OutputType>WinExe</OutputType>
     <AssemblyName>SheetsWindows</AssemblyName>
-    <Product>ZagoSheetsWin</Product><Title>ZagoSheetsWin</Title><Company>Zagotools</Company><Version>0.9.11</Version>
+    <Product>ZagoSheetsWin</Product><Title>ZagoSheetsWin</Title><Company>Zagotools</Company><Version>0.9.12</Version>
     <ApplicationIcon>../../branding/zagosheetswin.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>

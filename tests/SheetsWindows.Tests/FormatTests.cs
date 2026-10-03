@@ -9,6 +9,31 @@ namespace SheetsWindows.Tests;
 
 public sealed class FormatTests
 {
+    [Theory]
+    [InlineData(false, false, true)]
+    [InlineData(true, false, false)]
+    [InlineData(false, true, false)]
+    public void WorkbookDefaultContentTypeIsAcceptedButOverrideWinsAndDuplicatesFail(bool conflictingOverride, bool duplicateDefault, bool accepted)
+    {
+        var bytes = SpreadsheetFormats.WriteXlsx([new SheetValues("Dados", [new object?[] { "valor" }])]);
+        using var stream = new MemoryStream(); stream.Write(bytes); stream.Position = 0;
+        using (var zip = new ZipArchive(stream, ZipArchiveMode.Update, true))
+        {
+            var entry = zip.GetEntry("[Content_Types].xml")!;
+            System.Xml.Linq.XDocument types;
+            using (var input = entry.Open()) types = System.Xml.Linq.XDocument.Load(input);
+            var ns = types.Root!.Name.Namespace;
+            types.Root.Elements(ns + "Override").Single(e => (string?)e.Attribute("PartName") == "/xl/workbook.xml").Remove();
+            var general = types.Root.Elements(ns + "Default").Single(e => (string?)e.Attribute("Extension") == "xml");
+            general.SetAttributeValue("ContentType", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml");
+            if (duplicateDefault) types.Root.Add(new System.Xml.Linq.XElement(general));
+            if (conflictingOverride) types.Root.Add(new System.Xml.Linq.XElement(ns + "Override", new System.Xml.Linq.XAttribute("PartName", "/xl/workbook.xml"), new System.Xml.Linq.XAttribute("ContentType", "application/vnd.ms-excel.sheet.macroEnabled.main+xml")));
+            entry.Delete(); using var output = zip.CreateEntry("[Content_Types].xml").Open(); types.Save(output);
+        }
+        if (accepted) Assert.Equal(stream.ToArray(), SpreadsheetFormats.Prepare("xlsx", stream.ToArray()).Bytes);
+        else Assert.Throws<InvalidDataException>(() => SpreadsheetFormats.Prepare("xlsx", stream.ToArray()));
+    }
+
     private static byte[] Utf8(string text) => Encoding.UTF8.GetBytes(text);
     internal static byte[] Ods(string rows, string name = "Dados", bool script = false)
     {
@@ -110,7 +135,7 @@ public sealed class FormatTests
             var entry = zip.GetEntry("xl/worksheets/sheet1.xml")!; string xml; using (var reader = new StreamReader(entry.Open())) xml = reader.ReadToEnd(); entry.Delete();
             using var writer = new StreamWriter(zip.CreateEntry("xl/worksheets/sheet1.xml").Open()); writer.Write(xml.Replace("<is>", "<f>HYPERLINK()</f><is>"));
         }
-        Assert.Throws<ConversionMismatchException>(() => SpreadsheetFormats.VerifyValues(payload.Expected!, stream.ToArray()));
+        Assert.Throws<FormulaVerificationException>(() => SpreadsheetFormats.VerifyValues(payload.Expected!, stream.ToArray()));
     }
     [Fact]
     public void ExplicitDelimiterResolvesAmbiguity()

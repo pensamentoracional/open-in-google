@@ -58,6 +58,8 @@ internal sealed class ProcessingForm : Form
         cpuSampler.Tick += (_, _) => telemetry.SampleCpu(); cpuSampler.Start();
         var diagnostics = new DiagnosticLog(LocalStorage.ForCurrentUser());
         var outcome = DiagnosticEvent.Completed;
+        Exception? failure = null;
+        string? importNotice = null;
         if (recordDiagnostics) await diagnostics.RecordAsync(DiagnosticEvent.Started);
         try
         {
@@ -74,21 +76,27 @@ internal sealed class ProcessingForm : Form
                     else if (request.Action == LauncherAction.Copy) await launcher.CopyAsync(request.Path!, progress, cancellation.Token);
                     else await launcher.OpenAsync(request.Path!, progress, cancellation.Token);
                 });
+                importNotice = launcher.ImportNotice;
             }
         }
         catch (Exception ex) when (LauncherErrors.Expected(ex))
         {
-            ExitCode = 1; outcome = DiagnosticLog.Failure(ex);
+            failure = ex; ExitCode = 1; outcome = DiagnosticLog.Failure(ex);
             if (ex is not OperationCanceledException || !cancellation.IsCancellationRequested) ShowFailure(ex);
         }
         finally
         {
             cpuSampler.Stop();
             LastMetrics = telemetry.Capture();
-            if (recordDiagnostics) await diagnostics.RecordAsync(outcome, metrics: LastMetrics);
+            if (recordDiagnostics) await diagnostics.RecordAsync(outcome, metrics: LastMetrics, failure: failure);
             busy = false;
         }
-        if (ExitCode == 0 || cancellation.IsCancellationRequested) Close();
+        if (ExitCode == 0 && importNotice is not null)
+        {
+            Text = "Planilha aberta como cópia — ZagoSheetsWin"; status.Text = importNotice;
+            cancel.Text = "Fechar"; cancel.Enabled = true;
+        }
+        else if (ExitCode == 0 || cancellation.IsCancellationRequested) Close();
     }
     protected override void Dispose(bool disposing) { if (disposing) cancellation.Dispose(); base.Dispose(disposing); }
 }

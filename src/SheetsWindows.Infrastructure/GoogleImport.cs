@@ -100,7 +100,13 @@ public sealed class GoogleImport(LocalPreparation preparation, IOperationRegistr
         var workbook = zip.GetEntry("xl/workbook.xml") ?? throw new InvalidDataException("Workbook missing.");
         if (types.Length > 1024 * 1024 || workbook.Length > 1024 * 1024) throw new InvalidDataException("Workbook metadata too large.");
         using var t = types.Open(); using var tr = XmlReader.Create(t, new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null, MaxCharactersInDocument = 1024 * 1024 }); var xml = XDocument.Load(tr);
-        if (!xml.Descendants().Any(e => e.Name.LocalName == "Override" && (string?)e.Attribute("PartName") == "/xl/workbook.xml" && (string?)e.Attribute("ContentType") == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml")) throw new InvalidDataException("Unsupported workbook content type.");
+        XNamespace typesNamespace = "http://schemas.openxmlformats.org/package/2006/content-types";
+        if (xml.Root?.Name != typesNamespace + "Types") throw new InvalidDataException("Invalid content types XML.");
+        var overrides = xml.Root.Elements(typesNamespace + "Override").Where(e => (string?)e.Attribute("PartName") == "/xl/workbook.xml").ToArray();
+        var defaults = xml.Root.Elements(typesNamespace + "Default").Where(e => string.Equals((string?)e.Attribute("Extension"), "xml", StringComparison.OrdinalIgnoreCase)).ToArray();
+        if (overrides.Length > 1 || defaults.Length > 1) throw new InvalidDataException("Ambiguous workbook content type.");
+        var workbookType = (string?)(overrides.Length == 1 ? overrides[0] : defaults.SingleOrDefault())?.Attribute("ContentType");
+        if (workbookType != "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml") throw new InvalidDataException("Unsupported workbook content type.");
         using var w = workbook.Open(); using var wr = XmlReader.Create(w, new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null, MaxCharactersInDocument = 1024 * 1024 }); var book = XDocument.Load(wr);
         if (book.Root?.Name != XName.Get("workbook", "http://schemas.openxmlformats.org/spreadsheetml/2006/main")) throw new InvalidDataException("Invalid workbook XML.");
     }

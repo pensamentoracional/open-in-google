@@ -19,3 +19,12 @@ Compilação e testes devem passar antes do aceite. O pipeline Windows executa v
 - Suíte: 185 aprovados; 31 específicos do Windows não executados neste ambiente.
 - Verificações nativas de UI atualizadas, ainda pendentes de execução no Windows.
 - Candidata 0.9.10 autorizada para publicação na branch de desenvolvimento e validação no Windows. O aceite visual e funcional continua pendente.
+
+
+## Compatibilidade de importação — candidata 0.9.12
+
+- XLSX: resolver o tipo de conteúdo por Override e, na ausência dele, Default. Rejeitar declarações ambíguas e tipos incompatíveis.
+- XLS: quando a exportação Google contém fórmulas não verificáveis, abrir a mesma importação como cópia, preservar original e backup e mostrar um aviso. Divergências de valores continuam bloqueando a substituição.
+- Diagnóstico: categorias de falha sem mensagens de exceção, caminhos, contas ou conteúdo.
+- Arquivos reais enviados pelo usuário: leitura/preparação local de XLS e XLSX aprovada. Arquivos e dados privados não incluídos no repositório.
+- Testes sintéticos cobrem Default, precedência de Override, duplicidade, categorias do diagnóstico e reutilização do upload XLS com fórmulas. Validação integrada Google/Windows pendente.

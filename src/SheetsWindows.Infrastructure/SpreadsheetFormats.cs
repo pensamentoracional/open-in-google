@@ -9,7 +9,8 @@ using ExcelDataReader;
 namespace SheetsWindows.Infrastructure;
 
 public sealed class SpreadsheetCapacityException(string message) : NotSupportedException(message);
-public sealed class ConversionMismatchException() : IOException("Converted cell values differ; source preserved.");
+public class ConversionMismatchException() : IOException("Converted cell values differ; source preserved.");
+public sealed class FormulaVerificationException : ConversionMismatchException;
 public sealed class CopyRequiredException() : NotSupportedException("This workbook requires copy-only import.");
 public sealed record TextImportOptions(string Encoding = "auto", string Delimiter = "auto");
 public sealed record SheetValues(string Name, IReadOnlyList<IReadOnlyList<object?>> Rows);
@@ -219,7 +220,7 @@ public static class SpreadsheetFormats
                 while (xmlReader.Read())
                 {
                     ct.ThrowIfCancellationRequested();
-                    if (xmlReader.NodeType == XmlNodeType.Element && xmlReader.LocalName == "f" && xmlReader.NamespaceURI == "http://schemas.openxmlformats.org/spreadsheetml/2006/main") throw new ConversionMismatchException();
+                    if (xmlReader.NodeType == XmlNodeType.Element && xmlReader.LocalName == "f" && xmlReader.NamespaceURI == "http://schemas.openxmlformats.org/spreadsheetml/2006/main") throw new FormulaVerificationException();
                 }
             }
         }
