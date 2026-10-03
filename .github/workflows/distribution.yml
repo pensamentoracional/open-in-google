@@ -1,6 +1,9 @@
 name: Protected alpha distribution
 on:
   workflow_dispatch:
+  push:
+    branches: ['feature/zagosheetswin']
+    paths: ['.github/workflows/distribution.yml']
 permissions:
   contents: read
 jobs:
