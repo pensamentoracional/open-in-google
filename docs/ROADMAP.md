@@ -114,4 +114,9 @@ Consolidação técnica concluída na branch feature/zagosheetswin, versão 0.9.
 
 ## Próxima evolução alpha
 
-Ver [plano atualizado](ALPHA_NEXT.md): correção reproduzida do CSV de 200.000 células, ampliação de capacidade com medições, XLS com substituição habilitada por padrão e opção configurável, atalhos .url com ícone fornecido, instalação/primeiro uso/interface mínimos e gestão de backups. Retenção/teto ainda são propostas a definir; .ico aguarda envio. Novas planilhas ficam em incremento separado. Evidências do uso real registradas no plano, sem encerrar aceite de recuperação/reabertura.
+Ver [plano atualizado](ALPHA_NEXT.md): correção reproduzida do CSV de 200.000 células, ampliação de capacidade com medições, XLS com substituição habilitada por padrão e opção configurável, atalhos .url com ícone fornecido, instalação/primeiro uso/interface mínimos e gestão de backups. Backup aprovado: 30 dias, 200 MB por padrão e máximo configurável de 1 GB; .ico recebido. Tema claro inicial com toggle sol/lua aprovado. Novas planilhas ficam em incremento separado. Evidências do uso real registradas no plano, sem encerrar aceite de recuperação/reabertura.
+
+
+## Evolução alpha — etapa 1
+
+CSV: diagnóstico específico, capacidade de 500.000 células / 50.000 linhas / 20 MiB, escrita sequencial de XLSX e cancelamento. Versão 0.9.2; ver [evidências e limites](ALPHA_1_CSV.md). As demais etapas continuam planejadas.

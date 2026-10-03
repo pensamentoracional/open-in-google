@@ -9,12 +9,12 @@ namespace SheetsWindows.Infrastructure;
 public sealed class GoogleImport(LocalPreparation preparation, IOperationRegistry local, IRemoteRegistry remote,
     ISourceReader sources, IOperationLock locks, IGoogleAuth auth, GoogleDriveClient drive, TextImportOptions? textOptions = null)
 {
-    public const int MaxBytes = 5 * 1024 * 1024;
+    public const int MaxBytes = 20 * 1024 * 1024;
     public async Task<Uri> ImportAsync(string path, CancellationToken ct = default) => (await ImportReceiptAsync(path, ct)).Url;
     public async Task<ImportReceipt> ImportReceiptAsync(string path, CancellationToken ct = default)
     {
         await using (var preflight = sources.Open(path))
-            if (preflight.Content.Length > MaxBytes) throw new NotSupportedException("Imports support files up to 5 MiB.");
+            if (preflight.Content.Length > MaxBytes) throw new SpreadsheetCapacityException("O arquivo excede o limite de 20 MiB para importação.");
         var access = await auth.AccessAsync(cancellationToken: ct);
         var op = await preparation.PrepareAsync(access.AccountId, path, ct);
         await using var source = sources.Open(path);
@@ -26,10 +26,10 @@ public sealed class GoogleImport(LocalPreparation preparation, IOperationRegistr
         if (Convert.ToHexString(await SHA256.HashDataAsync(source.Content, ct)) != snapshot.Sha256) throw new LocalConflictException("Source changed; upload blocked.");
         // Hold the backup handle while checking and freezing the bytes that will be sent.
         await using var backup = new FileStream(snapshot.BackupPath, FileMode.Open, FileAccess.Read, FileShare.Read);
-        if (backup.Length > MaxBytes) throw new NotSupportedException("Imports support files up to 5 MiB.");
+        if (backup.Length > MaxBytes) throw new SpreadsheetCapacityException("O arquivo excede o limite de 20 MiB para importação.");
         using var buffer = new MemoryStream(); await backup.CopyToAsync(buffer, ct); var bytes = buffer.ToArray();
         if (bytes.LongLength != snapshot.Length || Convert.ToHexString(SHA256.HashData(bytes)) != snapshot.Sha256) throw new InvalidDataException("Snapshot integrity failure.");
-        var payload = SpreadsheetFormats.Prepare(op.Format, bytes, textOptions);
+        var payload = await Task.Run(() => SpreadsheetFormats.Prepare(op.Format, bytes, textOptions, ct), ct);
         var canReplace = op.Format == "xlsx" || payload.Expected is not null;
         var sheetKey = "sheet:" + op.Id.ToString("N");
         if (remote.Get(sheetKey) is { } pending)

@@ -124,6 +124,17 @@ public sealed class GoogleTests
         Assert.Equal(receipt.Url, await importer.ImportAsync(path)); Assert.Equal(2, server.Posts); Assert.True(File.Exists(path));
     }
     [Fact]
+    public async Task LargeCsvImportPreservesRawBackupAndVerifiesExportWithoutDuplicateUpload()
+    {
+        using var w = new Workspace(); var path = Path.ChangeExtension(w.Source, ".csv"); var original = FormatTests.LargeCsv(); File.WriteAllBytes(path, original);
+        using var server = new DriveServer(); var importer = Importer(w, server); var receipt = await importer.ImportReceiptAsync(path);
+        Assert.True(receipt.CanReplace); Assert.Equal(original, File.ReadAllBytes(receipt.Operation.Snapshot!.BackupPath));
+        using var http = new HttpClient(server, false); var drive = new GoogleDriveClient(http, new FixedAuth());
+        var mapping = new GoogleRemoteRegistry(Path.Combine(w.Root, "state", "google.db")).Get("sheet:" + receipt.Operation.Id.ToString("N"))!;
+        await new ConversionVerifier(drive).VerifyAsync(receipt.Operation, mapping, default);
+        Assert.Equal(receipt.Url, await importer.ImportAsync(path)); Assert.Equal(2, server.Posts); Assert.True(File.Exists(path));
+    }
+    [Fact]
     public async Task ExportRefreshesOnceChecksAccountAndComparesActualValues()
     {
         using var w = new Workspace(); var path = Path.ChangeExtension(w.Source, ".tsv"); File.WriteAllText(path, "codigo\tvalor\n001\t=1+1");
@@ -145,10 +156,10 @@ public sealed class GoogleTests
     [WindowsFact]
     public async Task NewLocalFormatsRetireOnlyAfterExportedValuesMatch()
     {
-        foreach (var format in new[] { "csv", "tsv", "ods" })
+        foreach (var format in new[] { "csv", "tsv", "ods", "large-csv" })
         {
-            using var w = new Workspace(); var path = Path.ChangeExtension(w.Source, "." + format);
-            var bytes = format == "ods" ? FormatTests.Ods("<table:table-row><table:table-cell office:value-type='string'><text:p>001</text:p></table:table-cell></table:table-row>") : Encoding.UTF8.GetBytes(format == "csv" ? "id,valor\n001,=1+1" : "id\tvalor\n001\t=1+1");
+            using var w = new Workspace(); var path = Path.ChangeExtension(w.Source, "." + (format == "large-csv" ? "csv" : format));
+            var bytes = format == "large-csv" ? FormatTests.LargeCsv() : format == "ods" ? FormatTests.Ods("<table:table-row><table:table-cell office:value-type='string'><text:p>001</text:p></table:table-cell></table:table-row>") : Encoding.UTF8.GetBytes(format == "csv" ? "id,valor\n001,=1+1" : "id\tvalor\n001\t=1+1");
             File.WriteAllBytes(path, bytes); ConfigureLauncher(w, out var storage); using var server = new DriveServer(); using var http = new HttpClient(server); var browser = new LauncherBrowser();
             var shortcut = await new WindowsLauncher(storage, http, browser).OpenAsync(path);
             Assert.False(File.Exists(path)); Assert.True(File.Exists(shortcut)); Assert.Equal(1, server.Exports); Assert.Equal(2, server.Posts);
@@ -158,7 +169,7 @@ public sealed class GoogleTests
     [WindowsFact]
     public async Task FidelityFailurePreservesOriginalThenResumesWithoutNewUpload()
     {
-        using var w = new Workspace(); var path = Path.ChangeExtension(w.Source, ".csv"); File.WriteAllText(path, "codigo,valor\n001,=1+1"); ConfigureLauncher(w, out var storage);
+        using var w = new Workspace(); var path = Path.ChangeExtension(w.Source, ".csv"); File.WriteAllBytes(path, FormatTests.LargeCsv()); ConfigureLauncher(w, out var storage);
         using var server = new DriveServer { ExportOverride = SpreadsheetFormats.WriteXlsx([new SheetValues("Dados", [new object?[] { "wrong" }])]) }; using var http = new HttpClient(server); var browser = new LauncherBrowser(); var launcher = new WindowsLauncher(storage, http, browser);
         await Assert.ThrowsAsync<ConversionMismatchException>(() => launcher.OpenAsync(path)); Assert.True(File.Exists(path)); Assert.Empty(browser.Opened); Assert.Equal(2, server.Posts);
         server.ExportOverride = null; await launcher.OpenAsync(path); Assert.False(File.Exists(path)); Assert.Equal(2, server.Posts);
@@ -336,7 +347,7 @@ public sealed class GoogleTests
     public async Task OversizedWorkbookIsRejectedBeforeAnyPost()
     {
         using var w = new Workspace(); File.WriteAllBytes(w.Source, new byte[GoogleImport.MaxBytes + 1]); using var server = new DriveServer();
-        await Assert.ThrowsAsync<NotSupportedException>(() => Importer(w, server).ImportAsync(w.Source)); Assert.Equal(0, server.Posts); Assert.Empty(w.Registry().Pending());
+        await Assert.ThrowsAsync<SpreadsheetCapacityException>(() => Importer(w, server).ImportAsync(w.Source)); Assert.Equal(0, server.Posts); Assert.Empty(w.Registry().Pending());
     }
     [Fact]
     public async Task DeletedRemoteIsNotRecreated()

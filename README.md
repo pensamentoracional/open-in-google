@@ -2,6 +2,8 @@
 
 Projeto em preparação: abrir planilhas locais no Google Sheets e substituir o original por um atalho de Internet na mesma pasta, com backup recuperável.
 
+**Atualização alpha 0.9.2:** [CSV, capacidade e diagnóstico](docs/ALPHA_1_CSV.md). Novo pacote depende de CI aprovado; o link do instalador abaixo ainda corresponde à 0.9.1.
+
 **Estado:** etapa 9 consolida o piloto 0.9.1 com nome ZagoSheetsWin, identidade Zagotools e créditos à origem. [Guia único de instalação, escopo e homologação](docs/STAGE_9.md). Suporte atual: planilhas no Windows; Google real/Explorer/Windows 11 serão homologados no fechamento. Os scripts PowerShell herdados ainda atualizam a cópia no Drive e não representam o fluxo seguro do aplicativo novo.
 
 ## Relationship with Open in Google

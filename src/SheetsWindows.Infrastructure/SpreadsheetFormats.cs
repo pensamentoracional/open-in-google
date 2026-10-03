@@ -8,6 +8,7 @@ using ExcelDataReader;
 
 namespace SheetsWindows.Infrastructure;
 
+public sealed class SpreadsheetCapacityException(string message) : NotSupportedException(message);
 public sealed class ConversionMismatchException() : IOException("Converted cell values differ; source preserved.");
 public sealed class CopyRequiredException() : NotSupportedException("This workbook requires copy-only import.");
 public sealed record TextImportOptions(string Encoding = "auto", string Delimiter = "auto");
@@ -17,7 +18,7 @@ public sealed record SpreadsheetPayload(byte[] Bytes, string MimeType, IReadOnly
 public static class SpreadsheetFormats
 {
     public const string XlsxMime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-    public const int MaxCells = 100000, MaxRows = 10000, MaxColumns = 1000;
+    public const int MaxCells = 500000, MaxRows = 50000, MaxColumns = 1000;
     public static readonly string[] Extensions = [".xlsx", ".ods", ".xls", ".csv", ".tsv"];
     public static string Format(string path)
     {
@@ -25,16 +26,17 @@ public static class SpreadsheetFormats
         if (!Extensions.Contains(extension)) throw new NotSupportedException("Unsupported spreadsheet extension.");
         return extension[1..];
     }
-    public static SpreadsheetPayload Prepare(string format, byte[] bytes, TextImportOptions? options = null)
+    public static SpreadsheetPayload Prepare(string format, byte[] bytes, TextImportOptions? options = null, CancellationToken ct = default)
     {
-        if (bytes.Length > GoogleImport.MaxBytes) throw new NotSupportedException("Sources are limited to 5 MiB.");
+        ct.ThrowIfCancellationRequested();
+        if (bytes.Length > GoogleImport.MaxBytes) throw new SpreadsheetCapacityException("O arquivo excede o limite de 20 MiB para importação.");
         switch (format)
         {
             case "xlsx": GoogleImport.ValidateXlsx(bytes); return new(bytes, XlsxMime, null);
             case "csv":
             case "tsv":
-                var table = new SheetValues("Dados", ReadText(bytes, format, options ?? new()));
-                return new(WriteXlsx([table]), XlsxMime, [table]);
+                var table = new SheetValues("Dados", ReadText(bytes, format, options ?? new(), ct));
+                return new(WriteXlsx([table], ct), XlsxMime, [table]);
             case "ods":
                 var expected = ReadOds(bytes);
                 return new(bytes, "application/vnd.oasis.opendocument.spreadsheet", expected);
@@ -65,19 +67,25 @@ public static class SpreadsheetFormats
         try { var text = encoding.GetString(bytes, offset, bytes.Length - offset); XmlConvert.VerifyXmlChars(text); return text; }
         catch (Exception ex) when (ex is DecoderFallbackException or XmlException) { throw new InvalidDataException("Invalid text encoding or characters."); }
     }
-    public static IReadOnlyList<IReadOnlyList<object?>> ReadText(byte[] bytes, string format, TextImportOptions options)
+    public static IReadOnlyList<IReadOnlyList<object?>> ReadText(byte[] bytes, string format, TextImportOptions options, CancellationToken ct = default)
     {
+        ct.ThrowIfCancellationRequested();
+        if (bytes.Length > GoogleImport.MaxBytes) throw new SpreadsheetCapacityException("O arquivo excede o limite de 20 MiB para importação.");
         var text = Decode(bytes, options.Encoding);
         if (text.Length == 0) throw new InvalidDataException("Empty text spreadsheet.");
-        if (format == "tsv") return ParseDelimited(text, '\t');
-        if (options.Delimiter is "comma" or "semicolon") return ParseDelimited(text, options.Delimiter == "comma" ? ',' : ';');
+        if (format == "tsv") return ParseDelimited(text, '\t', ct);
+        if (options.Delimiter is "comma" or "semicolon") return ParseDelimited(text, options.Delimiter == "comma" ? ',' : ';', ct);
         if (options.Delimiter != "auto") throw new ArgumentException("Unsupported delimiter.");
         var candidates = new List<IReadOnlyList<IReadOnlyList<object?>>>();
+        SpreadsheetCapacityException? capacity = null;
         foreach (var separator in new[] { ',', ';' })
         {
-            try { var rows = ParseDelimited(text, separator); if (rows[0].Count > 1) candidates.Add(rows); }
+            try { var rows = ParseDelimited(text, separator, ct); if (rows[0].Count > 1) candidates.Add(rows); }
+            catch (SpreadsheetCapacityException ex) { capacity ??= ex; }
             catch (InvalidDataException) { }
         }
+        // Never use another separator to bypass a resource boundary.
+        if (capacity is not null) throw capacity;
         if (candidates.Count > 1) throw new InvalidDataException("Ambiguous CSV delimiter; configure it explicitly.");
         if (candidates.Count == 1) return candidates[0];
         var quoted = false;
@@ -86,24 +94,29 @@ public static class SpreadsheetFormats
             if (text[i] == '"') { if (quoted && i + 1 < text.Length && text[i + 1] == '"') i++; else quoted = !quoted; }
             else if (!quoted && text[i] is ',' or ';') throw new InvalidDataException("Irregular delimited table.");
         }
-        return ParseDelimited(text, ',');
+        return ParseDelimited(text, ',', ct);
     }
-    private static IReadOnlyList<IReadOnlyList<object?>> ParseDelimited(string text, char separator)
+    private static IReadOnlyList<IReadOnlyList<object?>> ParseDelimited(string text, char separator, CancellationToken ct)
     {
         var rows = new List<IReadOnlyList<object?>>(); var row = new List<object?>(); var field = new StringBuilder();
         var quoted = false; var closed = false; var cells = 0;
         void Field()
         {
-            if (++cells > MaxCells || row.Count >= MaxColumns || field.Length > 32767) throw new InvalidDataException("Text spreadsheet limit exceeded.");
+            if (++cells > MaxCells) throw new SpreadsheetCapacityException($"A tabela excede o limite de {MaxCells:N0} células.");
+            if (row.Count >= MaxColumns) throw new SpreadsheetCapacityException($"A tabela excede o limite de {MaxColumns:N0} colunas.");
+            if (field.Length > 32767) throw new SpreadsheetCapacityException("Uma célula excede o limite de 32.767 caracteres.");
             row.Add(field.ToString()); field.Clear(); closed = false;
         }
         void Row()
         {
-            Field(); if (rows.Count >= MaxRows || rows.Count > 0 && row.Count != rows[0].Count) throw new InvalidDataException("Irregular or oversized table.");
+            Field(); if (rows.Count >= MaxRows) throw new SpreadsheetCapacityException($"A tabela excede o limite de {MaxRows:N0} linhas.");
+            if (rows.Count > 0 && row.Count != rows[0].Count) throw new InvalidDataException("Irregular delimited table.");
             rows.Add(row); row = [];
         }
         for (var i = 0; i < text.Length; i++)
         {
+            if ((i & 4095) == 0) ct.ThrowIfCancellationRequested();
+            if (field.Length > 32767) throw new SpreadsheetCapacityException("Uma célula excede o limite de 32.767 caracteres.");
             var c = text[i];
             if (quoted)
             {
@@ -123,7 +136,7 @@ public static class SpreadsheetFormats
     private static ZipArchive OpenPackage(byte[] bytes)
     {
         var zip = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
-        if (zip.Entries.Count > 10000 || zip.Entries.Sum(e => e.Length) > 20 * 1024 * 1024
+        if (zip.Entries.Count > 10000 || zip.Entries.Sum(e => e.Length) > 96 * 1024 * 1024
             || zip.Entries.Select(e => e.FullName).Distinct(StringComparer.OrdinalIgnoreCase).Count() != zip.Entries.Count)
         { zip.Dispose(); throw new InvalidDataException("Oversized or ambiguous ZIP package."); }
         return zip;
@@ -131,8 +144,8 @@ public static class SpreadsheetFormats
     private static XDocument Xml(ZipArchive zip, string path)
     {
         var entry = zip.GetEntry(path) ?? throw new InvalidDataException("Package part missing.");
-        if (entry.Length > 10 * 1024 * 1024) throw new InvalidDataException("XML part too large.");
-        using var stream = entry.Open(); using var reader = XmlReader.Create(stream, new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null, MaxCharactersInDocument = 10 * 1024 * 1024 });
+        if (entry.Length > 64 * 1024 * 1024) throw new InvalidDataException("XML part too large.");
+        using var stream = entry.Open(); using var reader = XmlReader.Create(stream, new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null, MaxCharactersInDocument = 64 * 1024 * 1024 });
         return XDocument.Load(reader);
     }
     public static IReadOnlyList<SheetValues>? ReadOds(byte[] bytes)
@@ -192,14 +205,23 @@ public static class SpreadsheetFormats
         var attr = element.Attribute(name); if (attr is null) return 1;
         if (!int.TryParse(attr.Value, out var value) || value < 1 || value > max) throw new InvalidDataException("Unbounded repetition."); return value;
     }
-    public static IReadOnlyList<SheetValues> ReadExcel(byte[] bytes, bool binary = false)
+    public static IReadOnlyList<SheetValues> ReadExcel(byte[] bytes, bool binary = false, CancellationToken ct = default)
     {
         if (!binary)
         {
             GoogleImport.ValidateXlsx(bytes);
             using var zip = OpenPackage(bytes); _ = Xml(zip, "xl/workbook.xml");
             foreach (var entry in zip.Entries.Where(e => e.FullName.StartsWith("xl/worksheets/", StringComparison.Ordinal) && e.FullName.EndsWith(".xml", StringComparison.Ordinal)))
-                if (Xml(zip, entry.FullName).Descendants(XName.Get("f", "http://schemas.openxmlformats.org/spreadsheetml/2006/main")).Any()) throw new ConversionMismatchException();
+            {
+                if (entry.Length > 64 * 1024 * 1024) throw new SpreadsheetCapacityException("Uma aba excede o limite de 64 MiB descompactados para conferência.");
+                using var xmlStream = entry.Open();
+                using var xmlReader = XmlReader.Create(xmlStream, new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null, MaxCharactersInDocument = 64 * 1024 * 1024 });
+                while (xmlReader.Read())
+                {
+                    ct.ThrowIfCancellationRequested();
+                    if (xmlReader.NodeType == XmlNodeType.Element && xmlReader.LocalName == "f" && xmlReader.NamespaceURI == "http://schemas.openxmlformats.org/spreadsheetml/2006/main") throw new ConversionMismatchException();
+                }
+            }
         }
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         using var stream = new MemoryStream(bytes);
@@ -211,6 +233,7 @@ public static class SpreadsheetFormats
             var rows = new List<IReadOnlyList<object?>>();
             while (reader.Read())
             {
+                ct.ThrowIfCancellationRequested();
                 if (rows.Count >= MaxRows || (long)cells + reader.FieldCount > MaxCells) throw new InvalidDataException("Workbook cell limit exceeded.");
                 var row = new object?[reader.FieldCount]; for (var i = 0; i < row.Length; i++) row[i] = reader.GetValue(i); cells += row.Length; rows.Add(row);
             }
@@ -218,29 +241,28 @@ public static class SpreadsheetFormats
         } while (reader.NextResult());
         return sheets;
     }
-    public static void VerifyValues(IReadOnlyList<SheetValues> expected, byte[] exported)
+    public static void VerifyValues(IReadOnlyList<SheetValues> expected, byte[] exported, CancellationToken ct = default)
     {
-        var actual = ReadExcel(exported);
+        var actual = ReadExcel(exported, ct: ct);
         if (actual.Count != expected.Count) throw new ConversionMismatchException();
         for (var s = 0; s < expected.Count; s++)
         {
             if (expected[s].Name != actual[s].Name) throw new ConversionMismatchException();
-            var a = Cells(expected[s]); var b = Cells(actual[s]);
-            if (a.Count != b.Count || a.Any(kv => !b.TryGetValue(kv.Key, out var value) || !Equals(kv.Value, value))) throw new ConversionMismatchException();
+            var left = expected[s].Rows; var right = actual[s].Rows;
+            for (var r = 0; r < Math.Max(left.Count, right.Count); r++)
+            {
+                ct.ThrowIfCancellationRequested();
+                var x = r < left.Count ? left[r] : Array.Empty<object?>();
+                var y = r < right.Count ? right[r] : Array.Empty<object?>();
+                for (var c = 0; c < Math.Max(x.Count, y.Count); c++)
+                {
+                    object? Normalize(object? value) => value switch { null or "" => null, int n => (double)n, _ => value };
+                    if (!Equals(Normalize(c < x.Count ? x[c] : null), Normalize(c < y.Count ? y[c] : null))) throw new ConversionMismatchException();
+                }
+            }
         }
     }
-    private static Dictionary<(int, int), object> Cells(SheetValues sheet)
-    {
-        var result = new Dictionary<(int, int), object>();
-        for (var r = 0; r < sheet.Rows.Count; r++) for (var c = 0; c < sheet.Rows[r].Count; c++)
-        {
-            var value = sheet.Rows[r][c]; if (value is null or "") continue;
-            if (value is int n) value = (double)n;
-            result.Add((r, c), value);
-        }
-        return result;
-    }
-    public static byte[] WriteXlsx(IReadOnlyList<SheetValues> sheets)
+    public static byte[] WriteXlsx(IReadOnlyList<SheetValues> sheets, CancellationToken ct = default)
     {
         XNamespace main = "http://schemas.openxmlformats.org/spreadsheetml/2006/main", rel = "http://schemas.openxmlformats.org/officeDocument/2006/relationships", package = "http://schemas.openxmlformats.org/package/2006/relationships", types = "http://schemas.openxmlformats.org/package/2006/content-types";
         using var buffer = new MemoryStream();
@@ -253,25 +275,38 @@ public static class SpreadsheetFormats
             Part("xl/_rels/workbook.xml.rels", new XElement(package + "Relationships", sheets.Select((_, i) => new XElement(package + "Relationship", new XAttribute("Id", "rId" + (i + 1)), new XAttribute("Type", rel.NamespaceName + "/worksheet"), new XAttribute("Target", $"worksheets/sheet{i + 1}.xml")))));
             for (var s = 0; s < sheets.Count; s++)
             {
-                var data = new XElement(main + "sheetData"); var rows = sheets[s].Rows;
+                var entry = zip.CreateEntry($"xl/worksheets/sheet{s + 1}.xml");
+                entry.LastWriteTime = new DateTimeOffset(1980, 1, 1, 0, 0, 0, TimeSpan.Zero);
+                using var stream = entry.Open();
+                using var writer = XmlWriter.Create(stream, new XmlWriterSettings { Encoding = new UTF8Encoding(false), CloseOutput = false });
+                writer.WriteStartElement("worksheet", main.NamespaceName); writer.WriteStartElement("sheetData", main.NamespaceName);
+                var rows = sheets[s].Rows;
                 for (var r = 0; r < rows.Count; r++)
                 {
-                    var row = new XElement(main + "row", new XAttribute("r", r + 1));
+                    ct.ThrowIfCancellationRequested();
+                    writer.WriteStartElement("row", main.NamespaceName); writer.WriteAttributeString("r", (r + 1).ToString(CultureInfo.InvariantCulture));
                     for (var c = 0; c < rows[r].Count; c++)
                     {
                         var value = rows[r][c]; if (value is null) continue;
-                        var cell = new XElement(main + "c", new XAttribute("r", Column(c) + (r + 1)));
-                        if (value is bool b) cell.Add(new XAttribute("t", "b"), new XElement(main + "v", b ? "1" : "0"));
-                        else if (value is double or int) cell.Add(new XElement(main + "v", Convert.ToString(value, CultureInfo.InvariantCulture)));
-                        else cell.Add(new XAttribute("t", "inlineStr"), new XElement(main + "is", new XElement(main + "t", new XAttribute(XNamespace.Xml + "space", "preserve"), Regex.Replace(value.ToString()!, @"_x[0-9a-fA-F]{4}_", m => "_x005F_" + m.Value[1..]))));
-                        row.Add(cell);
+                        writer.WriteStartElement("c", main.NamespaceName); writer.WriteAttributeString("r", Column(c) + (r + 1));
+                        if (value is bool flag)
+                        { writer.WriteAttributeString("t", "b"); writer.WriteElementString("v", main.NamespaceName, flag ? "1" : "0"); }
+                        else if (value is double or int) writer.WriteElementString("v", main.NamespaceName, Convert.ToString(value, CultureInfo.InvariantCulture));
+                        else
+                        {
+                            writer.WriteAttributeString("t", "inlineStr"); writer.WriteStartElement("is", main.NamespaceName); writer.WriteStartElement("t", main.NamespaceName);
+                            writer.WriteAttributeString("xml", "space", XNamespace.Xml.NamespaceName, "preserve");
+                            writer.WriteString(Regex.Replace(value.ToString()!, @"_x[0-9a-fA-F]{4}_", m => "_x005F_" + m.Value[1..]));
+                            writer.WriteEndElement(); writer.WriteEndElement();
+                        }
+                        writer.WriteEndElement();
                     }
-                    data.Add(row);
+                    writer.WriteEndElement();
                 }
-                Part($"xl/worksheets/sheet{s + 1}.xml", new XElement(main + "worksheet", data));
+                writer.WriteEndElement(); writer.WriteEndElement();
             }
         }
-        var bytes = buffer.ToArray(); if (bytes.Length > GoogleImport.MaxBytes) throw new NotSupportedException("Normalized workbook exceeds upload limit."); return bytes;
+        var bytes = buffer.ToArray(); if (bytes.Length > GoogleImport.MaxBytes) throw new SpreadsheetCapacityException("A planilha normalizada excede o limite de 20 MiB para upload."); return bytes;
     }
     private static string Column(int index)
     {

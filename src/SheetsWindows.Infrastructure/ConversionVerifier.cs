@@ -17,8 +17,8 @@ public sealed class ConversionVerifier(GoogleDriveClient drive, TextImportOption
         if (file.Length != snapshot.Length) throw new InvalidDataException("Backup changed.");
         var bytes = new byte[checked((int)file.Length)]; await file.ReadExactlyAsync(bytes, ct);
         if (Convert.ToHexString(SHA256.HashData(bytes)) != snapshot.Sha256) throw new InvalidDataException("Backup changed.");
-        var expected = SpreadsheetFormats.Prepare(operation.Format, bytes, options).Expected ?? throw new CopyRequiredException();
+        var expected = await Task.Run(() => SpreadsheetFormats.Prepare(operation.Format, bytes, options, ct).Expected ?? throw new CopyRequiredException(), ct);
         var exported = await drive.ExportXlsxAsync(operation.AccountId, mapping.FileId, ct);
-        SpreadsheetFormats.VerifyValues(expected, exported);
+        await Task.Run(() => SpreadsheetFormats.VerifyValues(expected, exported, ct), ct);
     }
 }

@@ -23,6 +23,53 @@ public sealed class FormatTests
         return buffer.ToArray();
     }
     internal static byte[] Xls() => Convert.FromBase64String(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "10x10.xls.b64")));
+    internal static byte[] LargeCsv(int rows = 5000, int columns = 40)
+    {
+        var text = new StringBuilder();
+        for (var r = 0; r < rows; r++)
+        {
+            for (var c = 0; c < columns; c++) { if (c > 0) text.Append(';'); text.Append($"{r:D5}-{c:D2}-ação"); }
+            text.Append('\n');
+        }
+        return Encoding.UTF8.GetPreamble().Concat(Utf8(text.ToString())).ToArray();
+    }
+    [Theory]
+    [InlineData(5000)]
+    [InlineData(12500)]
+    public void LargeCsvRoundTripVerifiesEveryCellAndRejectsTruncatedExport(int rows)
+    {
+        var payload = SpreadsheetFormats.Prepare("csv", LargeCsv(rows));
+        Assert.Equal(rows, payload.Expected![0].Rows.Count); Assert.Equal(40, payload.Expected[0].Rows[0].Count);
+        SpreadsheetFormats.VerifyValues(payload.Expected, payload.Bytes);
+        var truncated = new SheetValues("Dados", payload.Expected[0].Rows.Take(rows - 1).ToArray());
+        Assert.Throws<ConversionMismatchException>(() => SpreadsheetFormats.VerifyValues(payload.Expected, SpreadsheetFormats.WriteXlsx([truncated])));
+    }
+    [Theory]
+    [InlineData("auto")]
+    [InlineData("semicolon")]
+    public void CapacityFailureIsNotHiddenOrReinterpretedAsSingleColumn(string delimiter)
+    {
+        var error = Assert.Throws<SpreadsheetCapacityException>(() => SpreadsheetFormats.Prepare("csv", LargeCsv(12501, 40), new(Delimiter: delimiter)));
+        Assert.Contains("células", error.Message);
+        Assert.Contains("original", LauncherErrors.Message(error));
+    }
+    [Fact]
+    public void RowColumnFieldAndByteLimitsGiveSpecificDiagnostics()
+    {
+        Assert.Contains("linhas", Assert.Throws<SpreadsheetCapacityException>(() => SpreadsheetFormats.Prepare("csv", Utf8(new string('\n', SpreadsheetFormats.MaxRows + 1)))).Message);
+        Assert.Contains("colunas", Assert.Throws<SpreadsheetCapacityException>(() => SpreadsheetFormats.Prepare("tsv", Utf8(new string('\t', SpreadsheetFormats.MaxColumns)))).Message);
+        Assert.Contains("caracteres", Assert.Throws<SpreadsheetCapacityException>(() => SpreadsheetFormats.Prepare("csv", Utf8(new string('a', 32768)))).Message);
+        Assert.Contains("20 MiB", Assert.Throws<SpreadsheetCapacityException>(() => SpreadsheetFormats.Prepare("csv", new byte[GoogleImport.MaxBytes + 1])).Message);
+    }
+    [Fact]
+    public void CancelledConversionAndVerificationStopWithoutReturningPartialData()
+    {
+        using var stop = new CancellationTokenSource(); stop.Cancel();
+        Assert.Throws<OperationCanceledException>(() => SpreadsheetFormats.Prepare("csv", Utf8("a;b"), ct: stop.Token));
+        Assert.Throws<OperationCanceledException>(() => SpreadsheetFormats.WriteXlsx([new SheetValues("Dados", [new object?[] { "a" }])], stop.Token));
+        var payload = SpreadsheetFormats.Prepare("csv", Utf8("a;b"));
+        Assert.Throws<OperationCanceledException>(() => SpreadsheetFormats.VerifyValues(payload.Expected!, payload.Bytes, stop.Token));
+    }
     [Fact]
     public void BinaryXlsIsValidatedButAlwaysPreserved()
     {

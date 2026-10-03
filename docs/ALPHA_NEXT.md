@@ -1,6 +1,6 @@
 # Próxima evolução alpha — ZagoSheetsWin
 
-Decisões e prioridades alinhadas com Fernando em 03/10/2026. Este documento descreve trabalho aprovado e propostas; não declara implementação nem homologação concluídas. Pacote vigente: 0.9.1.
+Decisões e prioridades alinhadas com Fernando em 03/10/2026. Este documento descreve trabalho aprovado e propostas; não declara implementação nem homologação concluídas. Último pacote aprovado: 0.9.1; etapa 1 implementada em 0.9.2, aguardando aprovação do novo CI e teste Google real.
 
 ## Evidências do piloto real
 
@@ -9,6 +9,8 @@ Fernando confirmou XLSX e os demais formatos testados, exceto ODS. XLS conservou
 CSV fornecido para investigação: 1.315.517 bytes, UTF-8 com BOM, separador ponto e vírgula, 5.000 linhas e 40 colunas (200.000 células). O limite de 100.000 células impede processamento. Reproduzido no parser: a detecção automática mascara o limite e retorna erro de tabela irregular, exibido pela UI como configuração/conexão/arquivo aberto. Não publicar o CSV do usuário no repositório; usar dados sintéticos para regressão.
 
 ## 1. CSV, capacidade e diagnóstico
+
+Implementada na versão 0.9.2; evidências e limites em [ALPHA_1_CSV.md](ALPHA_1_CSV.md).
 
 - Corrigir a detecção de separador para não descartar erros de capacidade e não interpretar silenciosamente uma tabela como uma única coluna.
 - Mensagens específicas para tamanho, linhas/células, encoding, separador, conversão e rede; explicar o que foi preservado.
@@ -31,6 +33,7 @@ CSV fornecido para investigação: 1.315.517 bytes, UTF-8 com BOM, separador pon
 
 ## 4. Interface mínima e processamento
 
+- Tema: toggle discreto no canto direito do cabeçalho, usando os símbolos do template universal (sol `𖤓` e lua `☾`). Claro inicial; salvar a escolha localmente e aplicá-la às telas do programa. Incluir tooltip, nome acessível, teclado e respeito ao alto contraste do Windows. Validar a renderização dos símbolos no Windows 11.
 - Tela inicial: Abrir planilha, Configurações, Backups; Sobre/MIT acessível de forma discreta. Identidade Zagotools preservada; ícones acompanhados de rótulo/tooltip acessível.
 - Abrir planilha pelo seletor deve usar o fluxo de importação/substituição quando elegível; ação de importar cópia separada nas opções avançadas.
 - Duplo clique abre somente progresso compacto com estado e cancelar. Sucesso encerra; erro explica causa e oferece recuperação/diagnóstico.
@@ -40,7 +43,7 @@ CSV fornecido para investigação: 1.315.517 bytes, UTF-8 com BOM, separador pon
 ## 5. Atalhos com ícone próprio
 
 - Os atalhos atuais são arquivos .url (InternetShortcut), não páginas HTML; implementar IconFile/IconIndex usando .ico fornecido por Fernando.
-- Pendência: receber o arquivo .ico. Não substituir o logo por uma imagem presumida.
+- Ícone fornecido por Fernando recebido e validado (16 a 256 pixels); integração e validação no Explorer ainda pendentes. Não substituir o logo por uma imagem presumida.
 - Guardar ícone em caminho local persistente e estável para que atalhos sobrevivam a atualizações/desinstalação; não depender de arquivo temporário ou da pasta de programa removida.
 - Preservar URL, codificação, nomes e publicação atômica. Validar Explorer Windows 11 e comportamento com cache de ícones; considerar atualização explícita dos atalhos existentes.
 
@@ -48,15 +51,23 @@ CSV fornecido para investigação: 1.315.517 bytes, UTF-8 com BOM, separador pon
 
 - O armazenamento cresce aproximadamente com os originais únicos preservados, mais metadados; o snapshot cobre a versão inicial, não as futuras edições online.
 - Mostrar espaço ocupado, quantidade, data e ação Restaurar/Limpar. Limpeza deve distinguir backups concluídos de operações pendentes.
-- Proposta, ainda sem política final: retenção configurável por idade (exemplo 30 dias) e/ou teto em disco, com exclusão dos mais antigos elegíveis. Escolha e aviso devem explicar a perda da restauração do original.
+- Política aprovada: retenção padrão de 30 dias e quota padrão de 200 MB, configurável até no máximo 1 GB. Limpar os backups mais antigos elegíveis quando vencerem ou quando necessário para respeitar a quota. Mostrar os valores e explicar que a limpeza elimina a possibilidade de restaurar o original por esse backup.
 - Não ativar expiração/exclusão automática retroativa sem escolha informada; nunca remover snapshot necessário a uma operação incompleta/ambígua ou recuperação em andamento. Coordenar limpeza com locks, bancos e journal.
 - A limpeza preserva atalhos e arquivos do Google. Se não houver espaço para um backup obrigatório, conservar a fonte e explicar a falha.
+
+## 7. OAuth de distribuição — proposta em definição
+
+- Cliente OAuth desktop oficial identifica ZagoSheetsWin; não embutir login, senha ou tokens pessoais do mantenedor. Cada usuário autoriza com sua própria conta Google e os arquivos ficam no Drive desse usuário.
+- Projeto Google Cloud sob controle do Zagotools; conta dedicada é recomendação organizacional, não requisito técnico. Configurar público externo, produção, identidade da marca, contato de suporte, privacidade e exigências aplicáveis do Google antes de distribuição pública.
+- Manter permissões mínimas (`drive.file`) e separar projetos de teste e produção. O modo de teste tem restrições de usuários e duração da autorização, incompatíveis com distribuição cotidiana.
+- JSON próprio pode ficar opcional em Configurações avançadas para instalações que precisam controlar o próprio projeto, desenvolvimento e forks. Não integra o primeiro uso comum nem muda a conta Google do usuário. A necessidade de manter essa opção ainda será decidida com Fernando.
+- Troca de cliente exige tratar reautorização e preservar histórico de operações, atalhos e backups. Cliente oficial ainda não provisionado nem incorporado ao instalador.
 
 ## Ordem e critérios de entrega
 
 1. CSV/diagnóstico/capacidade, com testes de regressão e medidas de desempenho.
 2. XLS padrão configurável com conferência e backup; atalhos com ícone após receber .ico.
 3. Wizard, primeiro uso e telas mínimas; prévias nativas em DPI e teste de associação no Windows 11.
-4. Gestão de backup após decidir retenção/teto/padrões; criação de nova planilha em incremento separado.
+4. Gestão de backup com os padrões aprovados; criação de nova planilha em incremento separado.
 
 Manter versão alpha e distribuir pacote novo com evidências Windows/Linux/instalador. Não marcar aceite manual restante como concluído por inferência do relato.

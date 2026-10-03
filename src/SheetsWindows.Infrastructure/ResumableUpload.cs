@@ -29,7 +29,7 @@ public sealed class ResumableUpload(HttpClient http, IGoogleAuth auth, UploadSes
         var session = sessions.Get(attempt, bytes, mime) ?? throw new ReconciliationRequiredException();
         var location = UploadSessionStore.ValidateLocation(session.Location);
         var offset = 0; var query = true; var stalled = 0; var transient = 0; var refresh = false; var refreshed = false;
-        for (var requests = 0; requests < 100; requests++)
+        for (var requests = 0; requests < 200; requests++)
         {
             ct.ThrowIfCancellationRequested();
             using var request = new HttpRequestMessage(HttpMethod.Put, location);
