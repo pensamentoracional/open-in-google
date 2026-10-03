@@ -27,7 +27,7 @@ internal static class Program
                     entry.Item2.Hide();
                 }
                 Branding.PreviewTheme(ApplicationTheme.Dark);
-                foreach (var entry in new[] { ("home-dark", (Form)home), ("home-advanced-dark", (Form)homeAdvanced), ("setup-dark", (Form)setupPreview), ("processing-dark", (Form)processingPreview), ("processing-error-dark", (Form)failurePreview) })
+                foreach (var entry in new[] { ("home-dark", (Form)home), ("home-advanced-dark", (Form)homeAdvanced), ("setup-dark", (Form)setupPreview), ("recovery-dark", (Form)recoveryPreview), ("recovery-busy-dark", (Form)recoveryBusyPreview), ("processing-dark", (Form)processingPreview), ("processing-error-dark", (Form)failurePreview) })
                 {
                     entry.Item2.Show(); Application.DoEvents(); using var bitmap = new Bitmap(entry.Item2.Width, entry.Item2.Height);
                     entry.Item2.DrawToBitmap(bitmap, new Rectangle(Point.Empty, bitmap.Size)); bitmap.Save(Path.Combine(folder, entry.Item1 + ".png"), System.Drawing.Imaging.ImageFormat.Png); entry.Item2.Hide();
@@ -36,7 +36,7 @@ internal static class Program
             }
             if (args.Length == 2 && args[0] == "--verify-interface") { ApplicationConfiguration.Initialize(); return InterfaceVerification.Run(args[1]); }
             var request = LauncherRequest.Parse(args);
-            if (request.Action == LauncherAction.Version) { Console.WriteLine("ZagoSheetsWin pilot 0.9.5"); return 0; }
+            if (request.Action == LauncherAction.Version) { Console.WriteLine("ZagoSheetsWin pilot 0.9.6"); return 0; }
             if (request.Action is LauncherAction.Register or LauncherAction.Unregister)
             {
                 var held = new FileOperationLock(LocalStorage.ForCurrentUser().LocksPath).AcquireAsync("windows-registration").AsTask().GetAwaiter().GetResult();

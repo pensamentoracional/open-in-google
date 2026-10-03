@@ -149,6 +149,16 @@ public sealed class SqliteOperationRegistry : IOperationRegistry
         using var db = Open(); using var cmd = Command(db, null, $"SELECT {Columns} FROM operations ORDER BY id");
         using var read = cmd.ExecuteReader(); while (read.Read()) result.Add(Read(read)); return result;
     }
+    public Dictionary<Guid, DateTimeOffset?> SnapshotDates()
+    {
+        var result = new Dictionary<Guid, DateTimeOffset?>(); using var db = Open(); using var cmd = Command(db, null, "SELECT operation_id,MIN(created_at) FROM journal WHERE kind='SnapshotReady' GROUP BY operation_id");
+        using var r = cmd.ExecuteReader(); while (r.Read()) result.Add(Guid.Parse(r.GetString(0)), DateTimeOffset.Parse(r.GetString(1), System.Globalization.CultureInfo.InvariantCulture)); return result;
+    }
+    public DateTimeOffset? SnapshotCreatedAt(Guid id)
+    {
+        using var db = Open(); using var cmd = Command(db, null, "SELECT created_at FROM journal WHERE operation_id=$id AND kind='SnapshotReady' ORDER BY sequence LIMIT 1", ("$id", id.ToString("N")));
+        return cmd.ExecuteScalar() is string value ? DateTimeOffset.Parse(value, System.Globalization.CultureInfo.InvariantCulture) : null;
+    }
     public IReadOnlyList<JournalEvent> Events(Guid id)
     {
         var result = new List<JournalEvent>();

@@ -42,6 +42,10 @@ public sealed class GoogleRemoteRegistry : IRemoteRegistry
         using var cmd = Cmd(db, tx, "SELECT key,account,kind,hash,marker,file_id,verified FROM attempts WHERE key=$k", ("$k", key));
         using var r = cmd.ExecuteReader(); return r.Read() ? new(r.GetString(0), r.GetString(1), r.GetString(2), r.GetString(3), r.GetString(4), r.IsDBNull(5) ? null : r.GetString(5), r.GetBoolean(6)) : null;
     }
+    public Dictionary<string, RemoteAttempt> All()
+    {
+        var result=new Dictionary<string,RemoteAttempt>();using var db=Open();using var cmd=Cmd(db,null,"SELECT key,account,kind,hash,marker,file_id,verified FROM attempts");using var r=cmd.ExecuteReader();while(r.Read()){var key=r.GetString(0);result.Add(key,new(key,r.GetString(1),r.GetString(2),r.GetString(3),r.GetString(4),r.IsDBNull(5)?null:r.GetString(5),r.GetBoolean(6)));}return result;
+    }
     public RemoteAttempt? Get(string key) { using var db = Open(); return Read(db, null, key); }
     public RemoteAttempt Begin(string key, string accountId, string kind, string hash)
     {

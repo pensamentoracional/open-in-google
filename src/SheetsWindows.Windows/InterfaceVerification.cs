@@ -21,6 +21,11 @@ internal static class InterfaceVerification
             var stop = Descendants(recovery).OfType<Button>().Single(b => b.Text == "Cancelar retomada");
             var list = Descendants(recovery).OfType<ListBox>().Single();
             Require(stop.Visible && stop.Enabled && !stop.Bounds.IntersectsWith(list.Bounds) && stop.Bottom <= recovery.ClientSize.Height, "Recovery cancellation must remain visible outside the list.");
+            var numbers = Descendants(recovery).OfType<NumericUpDown>().ToArray();
+            Require(numbers.Any(n => n.Value == 30 && n.Maximum == 365) && numbers.Any(n => n.Value == 200 && n.Maximum == 1000), "Backup defaults and quota ceiling must be visible.");
+            Require(!Descendants(recovery).OfType<CheckBox>().Single().Checked, "Automatic cleanup requires informed opt-in.");
+            Require(list.Items.Count == 3, "Backup preview must cover completed, protected and cleaned history.");
+            foreach (var button in Descendants(recovery).OfType<Button>().Where(b => b.Visible)) Require(button.Bottom <= button.Parent!.ClientSize.Height && button.Right <= button.Parent.ClientSize.Width, "Backup actions must fit their container.");
             recovery.Hide();
         }
         var light = home.BackColor;

@@ -38,22 +38,20 @@ public static class PilotSetup
     }
 }
 
-public sealed record RecoveryEntry(Guid Id, string OriginalPath, long Bytes, int? ReplacementStep)
+public sealed record RecoveryEntry(Guid Id, string OriginalPath, long Bytes, int? ReplacementStep, DateTimeOffset? CapturedAt = null, bool Available = true, bool CanClean = false, int CleanupState = 0)
 {
-    public override string ToString() => $"{Path.GetFileName(OriginalPath)} — {Bytes:N0} bytes — {Id}";
+    public override string ToString() => $"{Path.GetFileName(OriginalPath)} — {Bytes:N0} bytes — {CapturedAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "data desconhecida"} — {(CleanupState == 2 ? "limpo" : CleanupState == 1 ? "limpeza pendente" : !Available ? "ausente" : CanClean ? "concluído" : "protegido / pendente")} — {Id}";
 }
 public sealed class BackupRecovery(LocalStorage storage)
 {
     public IReadOnlyList<RecoveryEntry> List()
     {
-        if (!File.Exists(storage.DatabasePath)) return [];
-        var registry = new SqliteOperationRegistry(storage.DatabasePath);
-        var journalPath = Path.Combine(storage.Root, "replacement.db");
-        var journal = File.Exists(journalPath) ? new ReplacementJournal(journalPath) : null;
-        return registry.Pending().Where(op => op.Snapshot is not null).Select(op =>
+        var path = Path.Combine(storage.Root, "replacement.db");
+        var records = File.Exists(path) ? new ReplacementJournal(path).All() : [];
+        return new BackupManagement(storage).Inspect().Entries.Select(entry =>
         {
-            var record = journal?.Get(op.Id);
-            return new RecoveryEntry(op.Id, record?.SourcePath ?? op.SourcePath, op.Snapshot!.Length, record?.Step);
+            var record = records.GetValueOrDefault(entry.Id);
+            return new RecoveryEntry(entry.Id,record?.SourcePath??entry.Operation.SourcePath,entry.Operation.Snapshot!.Length,record?.Step,entry.CapturedAt,entry.Available,entry.CanClean,entry.CleanupState);
         }).ToArray();
     }
     public async Task RestoreAsync(Guid id, string destination, CancellationToken ct = default)
@@ -61,6 +59,6 @@ public sealed class BackupRecovery(LocalStorage storage)
         var op = new SqliteOperationRegistry(storage.DatabasePath).Get(id) ?? throw new KeyNotFoundException();
         var snapshot = op.Snapshot ?? throw new InvalidDataException("No committed backup.");
         await using var held = await new FileOperationLock(storage.LocksPath).AcquireAsync(op.SourceKey, ct);
-        await new BackupStore(storage.BackupsPath).RestoreAsync(id, snapshot, destination, ct);
+        await new ManagedBackupStore(storage).RestoreAsync(id, snapshot, destination, ct);
     }
 }

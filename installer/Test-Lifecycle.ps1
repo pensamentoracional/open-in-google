@@ -44,7 +44,7 @@ foreach ($extension in $extensions) {
 }
 # Data sentinels are outside the installation manifest; Google network access is never needed.
 foreach ($directory in @('backups', 'auth', 'shortcuts', 'uploads', 'logs')) { New-Item (Join-Path $state $directory) -ItemType Directory -Force | Out-Null }
-$sentinels = @('registry.db', 'google.db', 'replacement.db', 'launcher-client.json', 'replacement-root.txt', 'backups/preserved.snapshot', 'formats.json', 'auth/preserved.dat', 'shortcuts/preserved.url', 'uploads/preserved.session', 'shortcut-icon-v1.ico', 'xls-replacement.json', 'theme.json', 'logs/events.jsonl')
+$sentinels = @('registry.db', 'google.db', 'replacement.db', 'launcher-client.json', 'replacement-root.txt', 'backups/preserved.snapshot', 'formats.json', 'auth/preserved.dat', 'shortcuts/preserved.url', 'uploads/preserved.session', 'shortcut-icon-v1.ico', 'xls-replacement.json', 'theme.json', 'backup-policy.json', 'backup-lifecycle.db', 'logs/events.jsonl')
 foreach ($name in $sentinels) { [IO.File]::WriteAllText((Join-Path $state $name), "preserve:$name") }
 $shortcut = Join-Path $env:RUNNER_TEMP 'preserved.url'
 [IO.File]::WriteAllText($shortcut, "[InternetShortcut]`r`nURL=https://docs.google.com/spreadsheets/d/test/edit`r`n")
@@ -54,10 +54,10 @@ Run-Checked $setup '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART'
 Assert-NoLauncherUI
 # The previous-version package uses the same payload to exercise installer version policy.
 $key = 'HKCU:/Software/Microsoft/Windows/CurrentVersion/Uninstall/{D970FA65-0364-4F10-A6AA-D4302F31B607}_is1'
-if ((Get-ItemProperty $key).DisplayVersion -ne '0.9.5') { throw 'Upgrade version missing' }
+if ((Get-ItemProperty $key).DisplayVersion -ne '0.9.6') { throw 'Upgrade version missing' }
 $reject = Start-Process -FilePath $oldSetup -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART' -PassThru
 if (!$reject.WaitForExit(120000)) { $reject.Kill(); throw 'Downgrade rejection timed out' }
-if ($reject.ExitCode -eq 0 -or (Get-ItemProperty $key).DisplayVersion -ne '0.9.5') { throw 'Downgrade was not blocked' }
+if ($reject.ExitCode -eq 0 -or (Get-ItemProperty $key).DisplayVersion -ne '0.9.6') { throw 'Downgrade was not blocked' }
 Write-Host 'Running registered uninstaller'
 Run-Checked (Current-Uninstaller) '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART'
 if (Test-Path $exe) { throw 'Installed executable remains' }

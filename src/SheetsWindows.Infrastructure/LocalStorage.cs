@@ -21,7 +21,7 @@ public sealed record LocalStorage(string Root)
     {
         PrivateDirectory.Create(Root);
         return new LocalPreparation(new SqliteOperationRegistry(DatabasePath), sourceReader ?? new SourceReader(),
-            new FileOperationLock(LocksPath), new BackupStore(BackupsPath));
+            new FileOperationLock(LocksPath), new ManagedBackupStore(this));
     }
 }
 

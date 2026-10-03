@@ -114,6 +114,29 @@ public sealed class GoogleTests
         public void Open(Uri uri) { if (Fail) throw new IOException("Browser unavailable"); Opened.Add(uri); }
     }
     [Fact]
+    public async Task BackupCleanupNeverDeletesCurrentImportOrDuplicatesRemovedOperation()
+    {
+        using var w = new Workspace(); File.WriteAllBytes(w.Source, Workbook()); using var server = new DriveServer();
+        var receipt = await Importer(w, server).ImportReceiptAsync(w.Source);
+        var storage = new LocalStorage(Path.GetDirectoryName(w.Database)!); var manager = new BackupManagement(storage);
+        new BackupCatalog(storage).Register(receipt.Operation.Id, receipt.Operation.Snapshot!, DateTimeOffset.UtcNow.AddDays(-31));
+        await manager.RegisterCopyCompletionAsync(receipt); await BackupPolicy.SaveAsync(storage, new(30,1,true));
+        File.WriteAllBytes(Path.Combine(storage.BackupsPath, "unknown.bin"), new byte[checked((int)(1_000_000 - receipt.Operation.Snapshot!.Length))]);
+        var auth = new FixedAuth(); using var http = new HttpClient(server, false);
+        var importer = new GoogleImport(storage.CreatePreparation(), w.Registry(), new GoogleRemoteRegistry(Path.Combine(storage.Root,"google.db")), new SourceReader(), new FileOperationLock(w.Locks), auth, new GoogleDriveClient(http,auth), backupManagement: manager);
+        Assert.Equal(receipt.Url, await importer.ImportAsync(w.Source)); Assert.True(File.Exists(receipt.Operation.Snapshot.BackupPath)); Assert.Equal(2,server.Posts);
+        await manager.DeleteAsync(receipt.Operation.Id);
+        await Assert.ThrowsAsync<BackupRemovedException>(() => importer.ImportAsync(w.Source)); Assert.Equal(2,server.Posts); Assert.Single(w.Registry().Pending());
+    }
+    [Fact]
+    public async Task BackupQuotaFailurePreservesOriginalAndMakesNoUploadRequest()
+    {
+        using var w = new Workspace(); var storage = new LocalStorage(Path.GetDirectoryName(w.Database)!); await BackupPolicy.SaveAsync(storage,new(30,1,true));
+        var path=Path.ChangeExtension(w.Source,".csv"); var bytes=new byte[1_000_001]; File.WriteAllBytes(path,bytes); using var server=new DriveServer(); var auth=new FixedAuth();using var http=new HttpClient(server,false);
+        var importer=new GoogleImport(storage.CreatePreparation(),w.Registry(),new GoogleRemoteRegistry(Path.Combine(storage.Root,"google.db")),new SourceReader(),new FileOperationLock(w.Locks),auth,new GoogleDriveClient(http,auth),backupManagement:new BackupManagement(storage));
+        await Assert.ThrowsAsync<BackupQuotaException>(()=>importer.ImportAsync(path)); Assert.Equal(bytes,File.ReadAllBytes(path)); Assert.Equal(0,server.Posts); Assert.Empty(w.Registry().Pending());
+    }
+    [Fact]
     public async Task CsvImportKeepsRawBackupUploadsTypedWorkbookAndReopensWithoutPost()
     {
         using var w = new Workspace(); var path = Path.ChangeExtension(w.Source, ".csv"); var original = Encoding.UTF8.GetBytes("codigo,valor\n001,=1+1"); File.WriteAllBytes(path, original);

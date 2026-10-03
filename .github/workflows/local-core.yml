@@ -68,7 +68,7 @@ jobs:
           $process = Start-Process -FilePath $exe -ArgumentList @('--preview-branding', $output) -PassThru
           if (!$process.WaitForExit(30000)) { $process.Kill(); throw 'Branding render timed out' }
           if ($process.ExitCode -ne 0) { throw 'Branding render failed' }
-          foreach ($file in @('home.png', 'home-advanced.png', 'home-advanced-dark.png', 'setup.png', 'first-use.png', 'setup-advanced.png', 'recovery.png', 'recovery-busy.png', 'about.png', 'processing.png', 'processing-error.png', 'home-dark.png', 'setup-dark.png', 'processing-dark.png', 'processing-error-dark.png')) {
+          foreach ($file in @('home.png', 'home-advanced.png', 'home-advanced-dark.png', 'setup.png', 'first-use.png', 'setup-advanced.png', 'recovery.png', 'recovery-busy.png', 'recovery-dark.png', 'recovery-busy-dark.png', 'about.png', 'processing.png', 'processing-error.png', 'home-dark.png', 'setup-dark.png', 'processing-dark.png', 'processing-error-dark.png')) {
             if (!(Test-Path (Join-Path $output $file))) { throw "Missing preview: $file" }
           }
       - uses: actions/upload-artifact@v4

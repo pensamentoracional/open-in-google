@@ -37,6 +37,11 @@ public sealed class ReplacementJournal
         var db = new SqliteConnection(connection); db.Open(); using var cmd = db.CreateCommand();
         cmd.CommandText = "PRAGMA synchronous=FULL"; cmd.ExecuteNonQuery(); return db;
     }
+    public Dictionary<Guid, ReplacementRecord> All()
+    {
+        var result = new Dictionary<Guid, ReplacementRecord>(); using var db = Open(); using var cmd = db.CreateCommand(); cmd.CommandText = "SELECT id,path,url,step,source_path FROM replacements";
+        using var r = cmd.ExecuteReader(); while(r.Read()) { var id=Guid.Parse(r.GetString(0));result.Add(id,new(id,r.GetString(1),r.GetString(2),r.GetInt32(3),r.IsDBNull(4)?null:r.GetString(4))); }return result;
+    }
     public ReplacementRecord? Get(Guid id)
     {
         using var db = Open(); using var cmd = db.CreateCommand(); cmd.CommandText = "SELECT path,url,step,source_path FROM replacements WHERE id=$id"; cmd.Parameters.AddWithValue("$id", id.ToString("N"));

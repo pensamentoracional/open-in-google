@@ -7,7 +7,7 @@ using SheetsWindows.Core;
 namespace SheetsWindows.Infrastructure;
 
 public sealed class GoogleImport(LocalPreparation preparation, IOperationRegistry local, IRemoteRegistry remote,
-    ISourceReader sources, IOperationLock locks, IGoogleAuth auth, GoogleDriveClient drive, TextImportOptions? textOptions = null, ProcessingTelemetry? telemetry = null)
+    ISourceReader sources, IOperationLock locks, IGoogleAuth auth, GoogleDriveClient drive, TextImportOptions? textOptions = null, ProcessingTelemetry? telemetry = null, BackupManagement? backupManagement = null)
 {
     public const int MaxBytes = 20 * 1024 * 1024;
     public async Task<Uri> ImportAsync(string path, CancellationToken ct = default) => (await ImportReceiptAsync(path, ct)).Url;
@@ -16,6 +16,19 @@ public sealed class GoogleImport(LocalPreparation preparation, IOperationRegistr
         await using (var preflight = sources.Open(path))
             if (preflight.Content.Length > MaxBytes) throw new SpreadsheetCapacityException("O arquivo excede o limite de 20 MiB para importação.");
         var access = await auth.AccessAsync(cancellationToken: ct);
+        if (backupManagement is not null)
+        {
+            Guid? existingId; long incoming;
+            await using (var preflight = sources.Open(path))
+            {
+                var existing = local.Pending().FirstOrDefault(o => o.AccountId == access.AccountId && o.SourceKey == preflight.Source.IdentityKey);
+                existingId = existing?.Id;
+                if (existingId is { } existingOperationId) backupManagement.RequireAvailable(existingOperationId);
+                incoming = existing?.Snapshot is { } saved && File.Exists(saved.BackupPath) ? 0 : preflight.Content.Length;
+            }
+            await backupManagement.MaintainAsync(ct, existingId);
+            await backupManagement.MakeRoomAsync(incoming, ct, existingId);
+        }
         var op = await preparation.PrepareAsync(access.AccountId, path, ct);
         await using var source = sources.Open(path);
         if (source.Source.IdentityKey != op.SourceKey) throw new LocalConflictException("Source identity changed; upload blocked.");

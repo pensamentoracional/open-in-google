@@ -48,12 +48,14 @@ Implementada em 0.9.5; ver [ALPHA_4_UI.md](ALPHA_4_UI.md). CI 37101501901, inter
 
 ## 5. Atalhos com ícone próprio
 
-- Os atalhos atuais são arquivos .url (InternetShortcut), não páginas HTML; implementar IconFile/IconIndex usando .ico fornecido por Fernando.
+- Implementado desde 0.9.3: atalhos .url (InternetShortcut), com IconFile/IconIndex usando o .ico fornecido por Fernando.
 - Ícone fornecido por Fernando recebido e validado (16 a 256 pixels); integrado aos novos atalhos na 0.9.3; aparência/cache no Explorer ainda aguarda aceite manual. Não substituir o logo por uma imagem presumida.
 - Guardar ícone em caminho local persistente e estável para que atalhos sobrevivam a atualizações/desinstalação; não depender de arquivo temporário ou da pasta de programa removida.
 - Preservar URL, codificação, nomes e publicação atômica. Validar Explorer Windows 11 e comportamento com cache de ícones; considerar atualização explícita dos atalhos existentes.
 
 ## 6. Gestão de backups
+
+Implementação 0.9.6 em validação. Ver [ALPHA_6_BACKUPS.md](ALPHA_6_BACKUPS.md).
 
 - O armazenamento cresce aproximadamente com os originais únicos preservados, mais metadados; o snapshot cobre a versão inicial, não as futuras edições online.
 - Mostrar espaço ocupado, quantidade, data e ação Restaurar/Limpar. Limpeza deve distinguir backups concluídos de operações pendentes.
