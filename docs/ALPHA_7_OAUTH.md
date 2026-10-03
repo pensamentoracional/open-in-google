@@ -77,3 +77,7 @@ Entrega protegida a implementar: job separado de release Windows, GitHub Environ
 Workflow manual distribution.yml, somente feature/zagosheetswin, Environment zagosheets-distribution. Criar esse Environment em Settings > Environments; restringir à branch e exigir aprovação se disponível no plano. Adicionar nele o secret ZAGOSHEETS_OAUTH_DESKTOP_JSON com o JSON desktop recebido. O conector atual não oferece configuração de environments/secrets; Fernando precisa completar esse passo no painel.
 
 O workflow falha sem o secret; reduz o JSON a client_id/client_secret, grava em RUNNER_TEMP, incorpora via propriedade de build e remove em always. Testes comuns/PRs continuam sem segredo. Pacote protegido usa versão 0.9.7; não é aprovado até execução bem-sucedida. Artifacts de distribuição contêm o binário com cliente desktop extraível, não o JSON avulso. Não rodar código de contribuições não revisadas com esse ambiente.
+
+## Feedback real e correção da interface
+
+Fernando confirmou importação de planilhas e restauração de backups antigos. Retenção/expiração/quota ainda não testadas manualmente. Reportou travamento ao abrir Configurações: leitura assíncrona bloqueada pelo contexto WinForms; continuação desacoplada do contexto e teste de regressão sem message pump aprovado. Toggle usa sol/lua vetoriais centrados, cabeçalho da home usa zonly.png e título maior, home compacta 440×390, botão Atualizações removido (apenas abria GitHub). Nome ZagoSheetsWin preservado. Build Windows aprovado; visual nativo e aceite da correção ainda pendentes.

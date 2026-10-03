@@ -20,10 +20,27 @@ internal sealed class ThemeToggle : Button
         using var border = new Pen(Dark ? Color.FromArgb(98, 217, 139) : Color.FromArgb(25, 134, 74)); g.DrawPath(border, shape);
         var diameter = track.Height - Px(6); var thumbX = Dark ? track.Right - diameter - Px(3) : track.X + Px(3);
         using var thumb = new SolidBrush(Color.White); g.FillEllipse(thumb, thumbX, track.Y + Px(3), diameter, diameter);
-        using var sunFont = new Font("Segoe UI Historic", 12); using var moonFont = new Font("Segoe UI Symbol", 13);
-        var flags = TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding;
-        TextRenderer.DrawText(g, "𖤓", sunFont, new Rectangle(Px(4), Px(3), Px(28), Height - Px(5)), Color.FromArgb(21, 76, 43), flags);
-        TextRenderer.DrawText(g, "☾", moonFont, new Rectangle(Width - Px(33), Px(3), Px(28), Height - Px(5)), Color.FromArgb(21, 76, 43), flags);
+        // Center vector symbols in each half of the track; independent of font bearings.
+        var cy = track.Top + track.Height / 2f;
+        var left = track.Left + track.Height / 2f;
+        var right = track.Right - track.Height / 2f;
+        using var symbol = new Pen(Color.FromArgb(21, 76, 43), Px(1));
+        var r = Px(4);
+        g.DrawEllipse(symbol, left - r, cy - r, r * 2, r * 2);
+        for (var i = 0; i < 8; i++)
+        {
+            var angle = i * Math.PI / 4;
+            g.DrawLine(symbol, left + (float)Math.Cos(angle) * Px(6), cy + (float)Math.Sin(angle) * Px(6),
+                left + (float)Math.Cos(angle) * Px(8), cy + (float)Math.Sin(angle) * Px(8));
+        }
+        using var crescent = new GraphicsPath();
+        crescent.AddEllipse(right - Px(7), cy - Px(7), Px(14), Px(14));
+        using var moon = new Region(crescent);
+        using var cutout = new GraphicsPath();
+        cutout.AddEllipse(right - Px(2), cy - Px(8), Px(14), Px(14));
+        moon.Exclude(cutout);
+        using var ink = new SolidBrush(Color.FromArgb(21, 76, 43));
+        g.FillRegion(ink, moon);
         if (Focused && ShowFocusCues) ControlPaint.DrawFocusRectangle(g, new Rectangle(0, 0, Width - 1, Height - 1), ForeColor, BackColor);
     }
     protected override AccessibleObject CreateAccessibilityInstance() => new ToggleAccessibility(this);

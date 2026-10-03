@@ -82,7 +82,7 @@ public static class LauncherConfiguration
         if (!File.Exists(path)) throw new LauncherNotConfiguredException();
         await using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
         if (file.Length > 65536 || (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0) throw new InvalidDataException("Invalid launcher configuration.");
-        using var reader = new StreamReader(file); return OAuthClient.FromJson(await reader.ReadToEndAsync(ct));
+        using var reader = new StreamReader(file); return OAuthClient.FromJson(await reader.ReadToEndAsync(ct).ConfigureAwait(false));
     }
 }
 public static class LauncherErrors

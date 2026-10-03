@@ -40,12 +40,13 @@ internal static class Branding
             control.Invalidate();
         }
         var header = new Panel { Dock = DockStyle.Top, Height = compact ? 60 : 70, Padding = new Padding(12, 8, 12, 8) };
-        using var source = typeof(Branding).Assembly.GetManifestResourceStream("Brand.logo.png")!;
+        using var source = typeof(Branding).Assembly.GetManifestResourceStream(compact ? "Brand.z.png" : "Brand.logo.png")!;
         using var original = Image.FromStream(source); var logo = new Bitmap(original);
-        var picture = new PictureBox { Image = logo, SizeMode = PictureBoxSizeMode.Zoom, Dock = DockStyle.Left, Width = compact ? 105 : 130 };
+        var picture = new PictureBox { Image = logo, SizeMode = PictureBoxSizeMode.Zoom, Dock = DockStyle.Left, Width = compact ? 40 : 130 };
         form.Disposed += (_, _) => logo.Dispose();
         var title = new Label { Text = Name + (compact ? "" : "\nPlanilhas no Google Sheets"), Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft, Padding = new Padding(10, 0, 0, 0) };
-        var right = new FlowLayoutPanel { Dock = DockStyle.Right, Width = aboutButton ? 204 : 88, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, Padding = new Padding(0, 5, 0, 0) };
+        if (compact) title.Font = new Font("Segoe UI", 15, FontStyle.Bold);
+        var right = new FlowLayoutPanel { Dock = DockStyle.Right, Width = aboutButton ? (compact ? 188 : 204) : 88, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, Padding = new Padding(0, 5, 0, 0) };
         var toggle = new ThemeToggle { Width = 80, Height = 32 };
         var tooltip = new ToolTip();
         void UpdateToggle() { toggle.Dark = Current == ApplicationTheme.Dark; toggle.AccessibleName = toggle.Dark ? "Ativar modo claro" : "Ativar modo escuro"; tooltip.SetToolTip(toggle, toggle.AccessibleName); toggle.Invalidate(); }
@@ -58,7 +59,7 @@ internal static class Branding
         };
         if (aboutButton)
         {
-            var about = new LinkLabel { Text = "Sobre / MIT", AutoSize = false, Width = 110, Height = 32, TextAlign = ContentAlignment.MiddleCenter, TabStop = true, AccessibleName = "Sobre o ZagoSheetsWin e licença MIT" };
+            var about = new LinkLabel { Text = "Sobre / MIT", AutoSize = false, Width = compact ? 100 : 110, Height = 32, TextAlign = ContentAlignment.MiddleCenter, TabStop = true, AccessibleName = "Sobre o ZagoSheetsWin e licença MIT" };
             about.LinkClicked += (_, _) => { using var info = new AboutForm(); info.ShowDialog(form); }; right.Controls.Add(about);
         }
         right.Controls.Add(toggle); header.Controls.Add(title); header.Controls.Add(picture); header.Controls.Add(right);

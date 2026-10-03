@@ -87,6 +87,25 @@ public sealed class LauncherTests
         Assert.Equal("{}", File.ReadAllText(LauncherConfiguration.ClientPath(storage)));
     }
     [Fact]
+    public void ExistingClientLoadsWithoutPumpingInterfaceContext()
+    {
+        using var w = new Workspace(); var storage = new LocalStorage(Path.Combine(w.Root, "state"));
+        LauncherConfiguration.SaveClient(storage, "{\"installed\":{\"client_id\":\"existing.apps.googleusercontent.com\"}}");
+        Exception? failure = null;
+        var thread = new Thread(() =>
+        {
+            SynchronizationContext.SetSynchronizationContext(new NonPumpingContext());
+            try { Assert.Equal("existing.apps.googleusercontent.com", LauncherConfiguration.LoadClientAsync(storage).GetAwaiter().GetResult().Id); }
+            catch (Exception ex) { failure = ex; }
+        }) { IsBackground = true };
+        thread.Start(); Assert.True(thread.Join(TimeSpan.FromSeconds(5)), "Client loading blocked the UI context.");
+        Assert.Null(failure);
+    }
+    private sealed class NonPumpingContext : SynchronizationContext
+    {
+        public override void Post(SendOrPostCallback callback, object? state) { }
+    }
+    [Fact]
     public async Task MissingConfigurationStopsBeforeNetworkOrFilesystemEffects()
     {
         using var w = new Workspace(); using var http = new HttpClient(new RejectNetwork());
