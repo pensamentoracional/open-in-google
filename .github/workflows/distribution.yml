@@ -94,7 +94,7 @@ jobs:
         run: |
           $compiler = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
           if (!(Test-Path $compiler)) { throw 'Inno Setup 6 compiler missing from Windows runner' }
-          & $compiler /DPilotVersion=0.9.7 installer/SheetsWindows.iss
+          & $compiler /DPilotVersion=0.9.8 installer/SheetsWindows.iss
           if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed' }
           $oldOutput = Join-Path (Get-Location).Path "artifacts/installer-old"
           & $compiler /DPilotVersion=0.7.0 "/O$oldOutput" installer/SheetsWindows.iss
@@ -104,7 +104,7 @@ jobs:
         shell: pwsh
         run: |
           ./installer/Test-UpdateVerification.ps1
-          ./installer/Test-Lifecycle.ps1 -ExpectedVersion 0.9.7
+          ./installer/Test-Lifecycle.ps1 -ExpectedVersion 0.9.8
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:

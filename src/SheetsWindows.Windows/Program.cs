@@ -36,7 +36,7 @@ internal static class Program
             }
             if (args.Length == 2 && args[0] == "--verify-interface") { ApplicationConfiguration.Initialize(); return InterfaceVerification.Run(args[1]); }
             var request = LauncherRequest.Parse(args);
-            if (request.Action == LauncherAction.Version) { Console.WriteLine("ZagoSheetsWin pilot 0.9.6"); return 0; }
+            if (request.Action == LauncherAction.Version) { Console.WriteLine("ZagoSheetsWin pilot 0.9.8"); return 0; }
             if (request.Action is LauncherAction.Register or LauncherAction.Unregister)
             {
                 var held = new FileOperationLock(LocalStorage.ForCurrentUser().LocksPath).AcquireAsync("windows-registration").AsTask().GetAwaiter().GetResult();
