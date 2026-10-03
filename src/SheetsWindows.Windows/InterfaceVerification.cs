@@ -28,6 +28,16 @@ internal static class InterfaceVerification
             foreach (var button in Descendants(recovery).OfType<Button>().Where(b => b.Visible)) Require(button.Bottom <= button.Parent!.ClientSize.Height && button.Right <= button.Parent.ClientSize.Width, "Backup actions must fit their container.");
             recovery.Hide();
         }
+        using (var tutorial = new TutorialForm())
+        {
+            tutorial.Show(); Application.DoEvents();
+            Require(!Descendants(tutorial).OfType<CheckBox>().Single().Checked, "Tutorial dismissal must require explicit opt-in.");
+            var next = Descendants(tutorial).OfType<Button>().Single(b => b.Text == "Próximo");
+            for (var i = 0; i < 3; i++) next.PerformClick();
+            Require(next.Text == "Começar", "Tutorial must reach its final page.");
+            Descendants(tutorial).OfType<Button>().Single(b => b.Text == "Pular").PerformClick();
+            Require(!tutorial.Visible, "Tutorial must be skippable on the final page.");
+        }
         var light = home.BackColor;
         Branding.PreviewTheme(ApplicationTheme.Dark);
         Require(home.BackColor != light && home.BackColor == preview.BackColor, "Theme must update open forms together.");

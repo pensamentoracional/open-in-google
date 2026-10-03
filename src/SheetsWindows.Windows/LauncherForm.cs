@@ -9,7 +9,7 @@ internal sealed class LauncherForm : Form
     public LauncherForm(LauncherRequest request, bool expanded = false)
     {
         if (request.Action != LauncherAction.Home) throw new ArgumentException("Home request required.");
-        Text = "ZagoSheetsWin"; ClientSize = new Size(440, 390); MinimumSize = new Size(440, 390); StartPosition = FormStartPosition.CenterScreen; AutoScaleMode = AutoScaleMode.Dpi;
+        Text = "ZagoSheetsWin"; ClientSize = new Size(440, 435); MinimumSize = new Size(440, 435); StartPosition = FormStartPosition.CenterScreen; AutoScaleMode = AutoScaleMode.Dpi;
         var layout = new FlowLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(18), FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true };
         Button Action(string text, EventHandler action) { var b = new Button { Text = text, Width = 382, Height = 38, AccessibleName = text.Replace("&", "") }; b.Click += action; return b; }
         void Pick(LauncherAction action)
@@ -22,9 +22,10 @@ internal sealed class LauncherForm : Form
         layout.Controls.Add(Action("&Abrir planilha…", (_, _) => Pick(LauncherAction.Open)));
         layout.Controls.Add(Action("&Configurações", (_, _) => { using var setup = new SetupForm(); setup.ShowDialog(this); }));
         layout.Controls.Add(Action("&Backups", (_, _) => { using var recovery = new RecoveryForm(); recovery.ShowDialog(this); }));
+        layout.Controls.Add(Action("&Ajuda — como funciona", (_, _) => { using var tutorial = new TutorialForm(); tutorial.ShowDialog(this); }));
         var advanced = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false, Visible = false };
         var toggle = new Button { Text = "Avançado ▸", AutoSize = true, AccessibleName = "Mostrar opções avançadas" };
-        toggle.Click += (_, _) => { advanced.Visible = !advanced.Visible; toggle.Text = advanced.Visible ? "Avançado ▾" : "Avançado ▸"; toggle.AccessibleName = advanced.Visible ? "Ocultar opções avançadas" : "Mostrar opções avançadas"; ClientSize = new Size(ClientSize.Width, (int)((advanced.Visible ? 485 : 390) * DeviceDpi / 96.0)); };
+        toggle.Click += (_, _) => { advanced.Visible = !advanced.Visible; toggle.Text = advanced.Visible ? "Avançado ▾" : "Avançado ▸"; toggle.AccessibleName = advanced.Visible ? "Ocultar opções avançadas" : "Mostrar opções avançadas"; ClientSize = new Size(ClientSize.Width, (int)((advanced.Visible ? 530 : 435) * DeviceDpi / 96.0)); };
         advanced.Controls.Add(Action("Importar cópia…", (_, _) => Pick(LauncherAction.Copy)));
         advanced.Controls.Add(Action("Abrir pasta de atalhos de cópia", (_, _) =>
         {
@@ -33,6 +34,6 @@ internal sealed class LauncherForm : Form
             catch (Exception ex) when (LauncherErrors.Expected(ex)) { status.Text = "Não foi possível abrir a pasta de atalhos. Confira as permissões deste usuário do Windows."; }
         }));
         layout.Controls.Add(toggle); layout.Controls.Add(advanced); Controls.Add(layout); Branding.Apply(this, compact: true);
-        if (expanded) { advanced.Visible = true; toggle.Text = "Avançado ▾"; toggle.AccessibleName = "Ocultar opções avançadas"; ClientSize = new Size(440, 485); }
+        if (expanded) { advanced.Visible = true; toggle.Text = "Avançado ▾"; toggle.AccessibleName = "Ocultar opções avançadas"; ClientSize = new Size(440, 530); }
     }
 }

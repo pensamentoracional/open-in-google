@@ -50,7 +50,7 @@ internal sealed class SetupForm : Form
         var saveXls = new Button { AutoSize = true, Text = "Salvar preferência XLS" };
         saveXls.Click += async (_, _) => { saveXls.Enabled = false; try { await XlsReplacementSettings.SaveAsync(storage, xls.Checked); status.Text = "Preferência XLS salva."; } catch (Exception ex) when (LauncherErrors.Expected(ex)) { status.Text = LauncherErrors.Message(ex); } finally { saveXls.Enabled = true; } };
         advanced.Controls.Add(saveXls);
-        layout.Controls.Add(Info("2. Conecte sua própria conta Google. As planilhas ficam no seu Drive; a autorização acontece no navegador."));
+        layout.Controls.Add(Info("2. " + (FirstUseState.NeedsAuthorization(storage) ? "Google ainda não conectado. Conecte sua própria conta e aceite a autorização no navegador." : "Google já conectado. Sua configuração foi preservada.") + " As planilhas ficam no seu Drive."));
         var connect = new Button { AutoSize = true, Text = "Salvar e conectar Google" };
         var save = new Button { AutoSize = true, Text = "Salvar configurações" };
         var defaults = new Button { AutoSize = true, Text = "Abrir Aplicativos padrão do Windows" };
@@ -86,7 +86,7 @@ internal sealed class SetupForm : Form
         }
         connect.Click += async (_, _) => await Save(true); save.Click += async (_, _) => await Save(false);
         layout.Controls.Add(connect); if (!firstUse) layout.Controls.Add(save);
-        layout.Controls.Add(Info("3. No Windows, procure ZagoSheetsWin e escolha os formatos desejados. Depois volte e clique em Concluir. A instalação não altera seus aplicativos padrão automaticamente."));
+        layout.Controls.Add(Info("3. Para abrir com dois cliques: no Windows, procure ZagoSheetsWin e associe CSV, XLS e XLSX. TSV é opcional; ODS é experimental. Depois volte aqui. Você também pode usar botão direito > Abrir com > ZagoSheetsWin, ou Abrir planilha no aplicativo."));
         defaults.Click += (_, _) => { try { new BrowserLauncher().Open(WindowsAssociationPlan.DefaultsUri); } catch (Exception ex) when (LauncherErrors.Expected(ex)) { status.Text = "Abra Configurações > Aplicativos > Aplicativos padrão e procure ZagoSheetsWin."; } };
         layout.Controls.Add(defaults); layout.Controls.Add(status); layout.Controls.Add(finish);
         finish.Click += (_, _) => Close();

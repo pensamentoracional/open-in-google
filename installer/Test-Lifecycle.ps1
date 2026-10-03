@@ -1,4 +1,4 @@
-param([string]$ExpectedVersion = "0.9.8")
+param([string]$ExpectedVersion = "0.9.9")
 $ErrorActionPreference = 'Stop'
 function Run-Checked($file, $arguments) {
     $process = Start-Process -FilePath $file -ArgumentList $arguments -PassThru

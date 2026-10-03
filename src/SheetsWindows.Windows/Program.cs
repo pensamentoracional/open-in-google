@@ -32,11 +32,21 @@ internal static class Program
                     entry.Item2.Show(); Application.DoEvents(); using var bitmap = new Bitmap(entry.Item2.Width, entry.Item2.Height);
                     entry.Item2.DrawToBitmap(bitmap, new Rectangle(Point.Empty, bitmap.Size)); bitmap.Save(Path.Combine(folder, entry.Item1 + ".png"), System.Drawing.Imaging.ImageFormat.Png); entry.Item2.Hide();
                 }
+                foreach (var theme in new[] { ApplicationTheme.Light, ApplicationTheme.Dark })
+                {
+                    Branding.PreviewTheme(theme);
+                    for (var page = 0; page < 4; page++)
+                    {
+                        using var tutorial = new TutorialForm(page); tutorial.Show(); Application.DoEvents();
+                        using var bitmap = new Bitmap(tutorial.Width, tutorial.Height); tutorial.DrawToBitmap(bitmap, new Rectangle(Point.Empty, bitmap.Size));
+                        bitmap.Save(Path.Combine(folder, $"tutorial-{page + 1}-{theme}.png"), System.Drawing.Imaging.ImageFormat.Png); tutorial.Hide();
+                    }
+                }
                 return 0;
             }
             if (args.Length == 2 && args[0] == "--verify-interface") { ApplicationConfiguration.Initialize(); return InterfaceVerification.Run(args[1]); }
             var request = LauncherRequest.Parse(args);
-            if (request.Action == LauncherAction.Version) { Console.WriteLine("ZagoSheetsWin pilot 0.9.8"); return 0; }
+            if (request.Action == LauncherAction.Version) { Console.WriteLine("ZagoSheetsWin pilot 0.9.9"); return 0; }
             if (request.Action is LauncherAction.Register or LauncherAction.Unregister)
             {
                 var held = new FileOperationLock(LocalStorage.ForCurrentUser().LocksPath).AcquireAsync("windows-registration").AsTask().GetAwaiter().GetResult();
@@ -53,13 +63,23 @@ internal static class Program
             if (request.Action is LauncherAction.FirstUse or LauncherAction.Home or LauncherAction.Open or LauncherAction.Copy)
             {
                 var storage = LocalStorage.ForCurrentUser();
+                if (request.Action is LauncherAction.FirstUse or LauncherAction.Home && !TutorialSettings.Load(storage))
+                {
+                    using var tutorial = new TutorialForm(); tutorial.ShowDialog();
+                }
                 if (FirstUseState.NeedsAuthorization(storage))
                 {
                     using var firstUse = new SetupForm(firstUse: true); Application.Run(firstUse);
-                    if (FirstUseState.NeedsAuthorization(storage)) return 1;
-                    if (request.Action is LauncherAction.Home or LauncherAction.FirstUse) return 0;
+                    if (request.Action is LauncherAction.FirstUse or LauncherAction.Home && !TutorialSettings.Load(storage))
+                {
+                    using var tutorial = new TutorialForm(); tutorial.ShowDialog();
                 }
-                else if (request.Action == LauncherAction.FirstUse) return 0;
+                if (FirstUseState.NeedsAuthorization(storage)) return 1;
+                    if (request.Action is LauncherAction.Home or LauncherAction.FirstUse)
+                    { using var home = new LauncherForm(new(LauncherAction.Home)); Application.Run(home); return home.ExitCode; }
+                }
+                else if (request.Action == LauncherAction.FirstUse)
+                { using var settings = new SetupForm(); settings.ShowDialog(); using var home = new LauncherForm(new(LauncherAction.Home)); Application.Run(home); return home.ExitCode; }
             }
             if (request.Action == LauncherAction.Setup) { using var setup = new SetupForm(); Application.Run(setup); return setup.ExitCode; }
             if (request.Action == LauncherAction.Recovery) { using var recovery = new RecoveryForm(); Application.Run(recovery); return 0; }

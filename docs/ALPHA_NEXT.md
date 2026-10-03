@@ -73,6 +73,12 @@ Auditoria e especificação registradas em [ALPHA_7_OAUTH.md](ALPHA_7_OAUTH.md).
 - JSON próprio pode ficar opcional em Configurações avançadas para instalações que precisam controlar o próprio projeto, desenvolvimento e forks. Não integra o primeiro uso comum nem muda a conta Google do usuário. A necessidade de manter essa opção ainda será decidida com Fernando.
 - Troca de cliente exige tratar reautorização e preservar histórico de operações, atalhos e backups. Cliente oficial incorporado ao código; instalador aprovado permanece 0.9.6.
 
+## 7D. Primeiro uso e tutorial visual — antes das traduções
+
+Entrega 0.9.9: tutorial offline de quatro páginas ilustradas, pulável a qualquer momento; Não mostrar novamente desmarcado e persistido somente por escolha explícita. Ajuda na home reabre sempre. Instalação interativa abre primeiro uso sem checkbox; configuração existente agora abre Configurações e depois home, em vez de encerrar. Instalação silenciosa preserva ausência de UI.
+
+Orientação Google, pasta/consentimento, associação opcional CSV/XLS/XLSX (TSV adicional, ODS experimental), Abrir com e Abrir planilha, substituição conferida, backups e limitações XLS. Não declarar associação concluída sem verificar; Windows mantém escolha do usuário. Página legal pertence ao site e não entra nesta etapa. Traduzir estas telas na etapa 8. Testes locais e prévias nativas no CI; aceite Windows real pendente.
+
 ## 8. Internacionalização — instalador e interface em 51 idiomas
 
 Etapa adicionada em 03/10/2026. Escopo aprovado para planejamento; traduções, integração e homologação ainda pendentes. Fontes canônicas: `T51-00_PRINCIPAL.md`, `i18n-51-locales-universal-template.json` e `i18n-51-locales-universal-guide.md`. O template contém a matriz e os contratos, mas seus packs não contêm traduções do ZagoSheetsWin.
