@@ -37,7 +37,11 @@ Linux, .NET 10, build Release. Medição de uma execução por caso em processo 
 
 Suite local: 149 aprovados, 29 testes específicos Windows ignorados, zero falhas. Novas regressões cobrem 200.000 e 500.000 células, exportação truncada, limites em detecção automática e explícita, cancelamento, importação/conferência com Drive simulado e reabertura sem novo upload. Casos Windows incluem retirada do CSV grande somente após conferência e retomada sem novo upload após divergência.
 
-CSV pessoal não incluído no repositório, artefatos ou logs; somente dimensões e resultados são registrados. CI Windows/Linux e instalador pendentes de validação no momento deste commit.
+CSV pessoal não incluído no repositório, artefatos ou logs; somente dimensões e resultados são registrados. CI [37095090039](https://github.com/zagozago/ZagoSheetsWin/actions/runs/37095090039) aprovado para o commit `fe33ac860962215fec5300c180922a9e676d0cdf`: Windows 177 aprovados / 1 teste exclusivo Unix ignorado; Linux 149 aprovados / 29 exclusivos Windows ignorados; zero falhas. Build, publicação, prévias nativas, instalação/atualização/desinstalação e preservação de estado aprovados. Prévia de configuração revisada sem cortes no texto de limites.
+
+## Pacote aprovado
+
+[Baixar instalador alpha 0.9.2 — Windows x64](https://github.com/zagozago/ZagoSheetsWin/actions/runs/37095090039/artifacts/11264096007). O ZIP contém `ZagoSheetsWin-Setup-win-x64.exe`. SHA-256 do ZIP: `fa2c3bd69d9d1316d09b1c9d6dd8ca868e7f33bce9f3f7f8f473919d905e7355`. Artefatos exigem login no GitHub e têm retenção até 01/01/2027. Atualizar preserva configuração, autorização e backups; não é preciso limpar a máquina para esta atualização.
 
 ## Teste real ao final das etapas
 

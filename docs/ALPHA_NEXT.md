@@ -1,6 +1,6 @@
 # Próxima evolução alpha — ZagoSheetsWin
 
-Decisões e prioridades alinhadas com Fernando em 03/10/2026. Este documento descreve trabalho aprovado e propostas; não declara implementação nem homologação concluídas. Último pacote aprovado: 0.9.1; etapa 1 implementada em 0.9.2, aguardando aprovação do novo CI e teste Google real.
+Decisões e prioridades alinhadas com Fernando em 03/10/2026. Este documento descreve trabalho aprovado e propostas; não declara implementação nem homologação concluídas. Pacote aprovado: 0.9.2 (etapa 1); CI Windows/Linux e instalador aprovados. Teste Google real desta correção permanece pendente.
 
 ## Evidências do piloto real
 

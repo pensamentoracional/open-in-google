@@ -119,4 +119,4 @@ Ver [plano atualizado](ALPHA_NEXT.md): correção reproduzida do CSV de 200.000 
 
 ## Evolução alpha — etapa 1
 
-CSV: diagnóstico específico, capacidade de 500.000 células / 50.000 linhas / 20 MiB, escrita sequencial de XLSX e cancelamento. Versão 0.9.2; ver [evidências e limites](ALPHA_1_CSV.md). As demais etapas continuam planejadas.
+CSV: diagnóstico específico, capacidade de 500.000 células / 50.000 linhas / 20 MiB, escrita sequencial de XLSX e cancelamento. Versão 0.9.2 aprovada no CI 37095090039 (177 testes Windows / 149 Linux e instalador); ver [evidências e limites](ALPHA_1_CSV.md). As demais etapas continuam planejadas.
