@@ -48,6 +48,34 @@ public static class LauncherConfiguration
         }
         finally { if (File.Exists(tmp)) File.Delete(tmp); }
     }
+    // Resolve only during setup; persist the selected identity before authorization.
+    // Existing invalid data is an error, never a reason to switch clients.
+    public static async Task<string> SetupClientJsonAsync(LocalStorage storage, string? customPath = null, CancellationToken ct = default)
+    {
+        if (File.Exists(ClientPath(storage)))
+        {
+            _ = await LoadClientAsync(storage, ct);
+            return await File.ReadAllTextAsync(ClientPath(storage), ct);
+        }
+        string json;
+        if (!string.IsNullOrWhiteSpace(customPath))
+        {
+            await using var file = new FileStream(customPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            if (file.Length > 65536 || (File.GetAttributes(customPath) & FileAttributes.ReparsePoint) != 0)
+                throw new InvalidDataException("Invalid OAuth client.");
+            using var reader = new StreamReader(file);
+            json = await reader.ReadToEndAsync(ct);
+        }
+        else
+        {
+            using var resource = typeof(LauncherConfiguration).Assembly.GetManifestResourceStream("OAuth.official.desktop.json")
+                ?? throw new LauncherNotConfiguredException();
+            using var reader = new StreamReader(resource);
+            json = await reader.ReadToEndAsync(ct);
+        }
+        _ = OAuthClient.FromJson(json);
+        return json;
+    }
     public static async Task<OAuthClient> LoadClientAsync(LocalStorage storage, CancellationToken ct = default)
     {
         var path = ClientPath(storage);

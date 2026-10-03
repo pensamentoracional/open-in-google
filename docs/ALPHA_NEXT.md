@@ -65,13 +65,13 @@ Implementada em 0.9.6; CI 37119038565, interface e instalador aprovados. Aceite 
 
 ## 7. OAuth de distribuição — proposta em definição
 
-Auditoria e especificação registradas em [ALPHA_7_OAUTH.md](ALPHA_7_OAUTH.md). A integração depende do cliente desktop oficial, contato público e domínio do Zagotools. Instalador aprovado permanece 0.9.6.
+Auditoria e especificação registradas em [ALPHA_7_OAUTH.md](ALPHA_7_OAUTH.md). 7A implementada no código com cliente desktop recebido; novo instalador e testes reais pendentes. Domínio zagotools.top verificado, suporte zagotools@zagotools.top e projeto existente preservado. Site e conclusão pública ficam para depois. Instalador aprovado permanece 0.9.6.
 
 - Cliente OAuth desktop oficial identifica ZagoSheetsWin; não embutir login, senha ou tokens pessoais do mantenedor. Cada usuário autoriza com sua própria conta Google e os arquivos ficam no Drive desse usuário.
 - Projeto Google Cloud sob controle do Zagotools; conta dedicada é recomendação organizacional, não requisito técnico. Configurar público externo, produção, identidade da marca, contato de suporte, privacidade e exigências aplicáveis do Google antes de distribuição pública.
-- Manter permissões mínimas (`drive.file`) e separar projetos de teste e produção. O modo de teste tem restrições de usuários e duração da autorização, incompatíveis com distribuição cotidiana.
+- Manter permissões mínimas (`drive.file`) no projeto existente escolhido por Fernando. O modo de teste tem restrições de usuários e duração da autorização, incompatíveis com distribuição cotidiana.
 - JSON próprio pode ficar opcional em Configurações avançadas para instalações que precisam controlar o próprio projeto, desenvolvimento e forks. Não integra o primeiro uso comum nem muda a conta Google do usuário. A necessidade de manter essa opção ainda será decidida com Fernando.
-- Troca de cliente exige tratar reautorização e preservar histórico de operações, atalhos e backups. Cliente oficial ainda não provisionado nem incorporado ao instalador.
+- Troca de cliente exige tratar reautorização e preservar histórico de operações, atalhos e backups. Cliente oficial incorporado ao código; instalador aprovado permanece 0.9.6.
 
 ## 8. Internacionalização — instalador e interface em 51 idiomas
 

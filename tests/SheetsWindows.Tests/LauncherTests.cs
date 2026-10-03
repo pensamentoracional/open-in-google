@@ -58,6 +58,35 @@ public sealed class LauncherTests
         Assert.Empty(Directory.GetFiles(storage.Root, "*.tmp"));
     }
     [Fact]
+    public async Task SetupUsesOfficialClientAndPinsIdentity()
+    {
+        using var w = new Workspace(); var storage = new LocalStorage(Path.Combine(w.Root, "state"));
+        if (typeof(LauncherConfiguration).Assembly.GetManifestResourceInfo("OAuth.official.desktop.json") is null)
+        {
+            await Assert.ThrowsAsync<LauncherNotConfiguredException>(() => LauncherConfiguration.SetupClientJsonAsync(storage));
+            return;
+        }
+        var json = await LauncherConfiguration.SetupClientJsonAsync(storage);
+        Assert.EndsWith(".apps.googleusercontent.com", OAuthClient.FromJson(json).Id);
+        Assert.False(File.Exists(LauncherConfiguration.ClientPath(storage)));
+        LauncherConfiguration.SaveClient(storage, json);
+        Assert.Equal(json, await LauncherConfiguration.SetupClientJsonAsync(storage, "missing-custom.json"));
+    }
+    [Fact]
+    public async Task SetupPreservesCustomAndRejectsInvalidExistingClient()
+    {
+        using var w = new Workspace(); var storage = new LocalStorage(Path.Combine(w.Root, "state"));
+        var custom = Path.Combine(w.Root, "custom.json");
+        var json = "{\"installed\":{\"client_id\":\"custom.apps.googleusercontent.com\"}}";
+        File.WriteAllText(custom, json);
+        Assert.Equal(json, await LauncherConfiguration.SetupClientJsonAsync(storage, custom));
+        LauncherConfiguration.SaveClient(storage, json);
+        Assert.Equal(json, await LauncherConfiguration.SetupClientJsonAsync(storage));
+        File.WriteAllText(LauncherConfiguration.ClientPath(storage), "{}");
+        await Assert.ThrowsAsync<InvalidDataException>(() => LauncherConfiguration.SetupClientJsonAsync(storage));
+        Assert.Equal("{}", File.ReadAllText(LauncherConfiguration.ClientPath(storage)));
+    }
+    [Fact]
     public async Task MissingConfigurationStopsBeforeNetworkOrFilesystemEffects()
     {
         using var w = new Workspace(); using var http = new HttpClient(new RejectNetwork());

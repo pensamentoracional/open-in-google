@@ -1,39 +1,46 @@
-name: Local core
+name: Protected alpha distribution
 on:
-  push:
-    branches: ['feature/local-core', 'feature/google-import', 'feature/shortcut-replacement', 'feature/windows-integration', 'feature/installable-pilot', 'feature/formats-environments', 'feature/robustness', 'feature/zagosheetswin', 'main']
-  pull_request:
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
-  test:
-    timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
+  distribution:
+    if: github.ref == 'refs/heads/feature/zagosheetswin'
+    runs-on: windows-latest
+    timeout-minutes: 20
+    environment: zagosheets-distribution
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
         with:
           dotnet-version: '10.0.401'
+      - name: Prepare private desktop client
+        shell: pwsh
+        env:
+          OAUTH_JSON: ${{ secrets.ZAGOSHEETS_OAUTH_DESKTOP_JSON }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:OAUTH_JSON)) { throw 'Distribution OAuth secret is required' }
+          try { $config = $env:OAUTH_JSON | ConvertFrom-Json -ErrorAction Stop } catch { throw 'Invalid desktop OAuth JSON' }
+          if (!$config.installed -or !$config.installed.client_id.EndsWith('.apps.googleusercontent.com')) { throw 'Desktop OAuth client required' }
+          if ($config.web -or $config.type -or $config.installed.access_token -or $config.installed.refresh_token) { throw 'Only desktop client configuration is allowed' }
+          $minimal = @{ installed = @{ client_id = $config.installed.client_id; client_secret = $config.installed.client_secret } } | ConvertTo-Json -Depth 3 -Compress
+          $path = Join-Path $env:RUNNER_TEMP 'zagosheets-oauth.json'
+          [IO.File]::WriteAllText($path, $minimal)
+          "DistributionOAuthClientPath=$path" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       - run: dotnet restore SheetsWindows.slnx --locked-mode
-      - run: dotnet build SheetsWindows.slnx --configuration Release --no-restore
+      - run: dotnet build SheetsWindows.slnx --configuration Release --no-restore -p:RequireDistributionOAuth=true
       - run: dotnet test SheetsWindows.slnx --configuration Release --no-build --no-restore --logger "trx;LogFileName=local-core.trx"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
-          name: test-results-${{ matrix.os }}
+          name: test-results-distribution-windows
           path: '**/TestResults/*.trx'
           if-no-files-found: ignore
 
       - name: Publish Windows launcher
-        if: runner.os == 'Windows'
-        run: dotnet publish src/SheetsWindows.Windows --configuration Release --runtime win-x64 --self-contained true --output artifacts/SheetsWindows-win-x64
+        run: dotnet publish src/SheetsWindows.Windows --configuration Release --runtime win-x64 --self-contained true --output artifacts/SheetsWindows-win-x64 -p:RequireDistributionOAuth=true
 
       - name: Verify Windows package
-        if: runner.os == 'Windows'
         shell: pwsh
         run: |
           $package = 'artifacts/SheetsWindows-win-x64'
@@ -48,7 +55,6 @@ jobs:
           if ($probe.ExitCode -ne 0) { throw 'Published launcher failed to start' }
 
       - name: Verify native interface offline
-        if: runner.os == 'Windows'
         shell: pwsh
         run: |
           $exe = Join-Path (Get-Location).Path 'artifacts/SheetsWindows-win-x64/SheetsWindows.exe'
@@ -60,7 +66,6 @@ jobs:
           if ($process.ExitCode -ne 0) { Get-Content $errorFile; throw 'Native interface verification failed' }
           Get-Content $output
       - name: Render native branding previews offline
-        if: runner.os == 'Windows'
         shell: pwsh
         run: |
           $exe = Join-Path (Get-Location).Path 'artifacts/SheetsWindows-win-x64/SheetsWindows.exe'
@@ -72,39 +77,40 @@ jobs:
             if (!(Test-Path (Join-Path $output $file))) { throw "Missing preview: $file" }
           }
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        if: runner.os == 'Windows'
         with:
           name: ZagoSheetsWin-branding-preview
           path: artifacts/branding-preview/
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        if: runner.os == 'Windows'
         with:
           name: ZagoSheetsWin-win-x64
           path: artifacts/SheetsWindows-win-x64/
 
       - name: Compile per-user installer
-        if: runner.os == 'Windows'
         shell: pwsh
         run: |
           $compiler = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
           if (!(Test-Path $compiler)) { throw 'Inno Setup 6 compiler missing from Windows runner' }
-          & $compiler installer/SheetsWindows.iss
+          & $compiler /DPilotVersion=0.9.7 installer/SheetsWindows.iss
           if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed' }
           $oldOutput = Join-Path (Get-Location).Path "artifacts/installer-old"
           & $compiler /DPilotVersion=0.7.0 "/O$oldOutput" installer/SheetsWindows.iss
           if ($LASTEXITCODE -ne 0) { throw 'Previous-version policy fixture compilation failed' }
 
       - name: Verify installation, upgrade and preservation on uninstall
-        if: runner.os == 'Windows'
         shell: pwsh
         run: |
           ./installer/Test-UpdateVerification.ps1
-          ./installer/Test-Lifecycle.ps1
+          ./installer/Test-Lifecycle.ps1 -ExpectedVersion 0.9.7
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        if: runner.os == 'Windows'
         with:
           name: ZagoSheetsWin-Setup-win-x64
           path: artifacts/installer/ZagoSheetsWin-Setup-win-x64.exe
           if-no-files-found: error
+
+      - name: Remove private build configuration
+        if: always()
+        shell: pwsh
+        run: |
+          Remove-Item (Join-Path $env:RUNNER_TEMP 'zagosheets-oauth.json') -Force -ErrorAction SilentlyContinue

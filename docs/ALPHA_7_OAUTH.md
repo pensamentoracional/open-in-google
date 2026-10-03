@@ -1,6 +1,6 @@
 # Etapa 7 — OAuth de distribuição
 
-Status: especificação e auditoria concluídas em 03/10/2026; provisionamento Google Cloud, incorporação ao pacote e teste real pendentes. Instalador aprovado continua 0.9.6. Não existe ainda cliente oficial incorporado.
+Status: etapa 7A implementada em 03/10/2026; conclusão Google Cloud, novo pacote e teste real pendentes. Instalador aprovado continua 0.9.6. 7A: cliente desktop recebido e incorporado ao código; primeiro uso sem JSON implementado. Novo instalador e validação Google real ainda pendentes.
 
 ## Experiência proposta
 
@@ -14,7 +14,7 @@ Proposta: manter JSON próprio somente em Avançado para configuração inicial,
 - Tokens ficam localmente protegidos por DPAPI, vinculados ao usuário Windows e cliente OAuth; não devem ser incorporados nem transmitidos ao Zagotools.
 - `AccountAsync` retorna `client.Id + ":" + permissionId`. O cliente participa das identidades de conta, pasta remota, operações e tokens.
 - `LauncherConfiguration.SaveClient` recusa substituir um cliente por outro ID. Este bloqueio precisa permanecer.
-- Hoje `SetupForm` e `FirstUseState` exigem o JSON local. Ainda precisam ganhar resolução do cliente oficial e fluxo sem seleção de JSON.
+- `SetupForm` resolve e persiste o cliente oficial no primeiro uso; `FirstUseState` continua validando o cliente local fixado.
 - Trocar cliente/projeto não é apenas pedir outro login: pode afetar acesso autorizado via `drive.file`, associação de documentos e reconciliação. Não renomear namespaces nem apagar bancos para forçar a troca.
 
 ## Identidade e exposição
@@ -26,11 +26,11 @@ O e-mail escolhido como **User support email** aparece ao usuário na tela de co
 ## Provisionamento — ações no Google Cloud
 
 1. Definir contato público de suporte e domínio controlado pelo Zagotools, com página do produto, política de privacidade e termos; verificar o domínio conforme exigência do Google.
-2. Criar projeto de produção separado do projeto usado no piloto/desenvolvimento, sob controle do Zagotools. Conta exclusiva é uma opção organizacional, não exigência para o login dos usuários.
+2. Decisão de Fernando: reutilizar o projeto e cliente desktop atuais, administrados pela conta pessoal. Domínio zagotools.top verificado; suporte zagotools@zagotools.top.
 3. Habilitar **Google Drive API**. Em Google Auth Platform, configurar Branding com ZagoSheetsWin, contato de suporte e URLs reais; contato técnico do projeto separado quando desejado.
 4. Em Audience, escolher **External**. Testing pode servir para validar com usuários explicitamente cadastrados; para distribuição cotidiana, configurar **In production** e atender a verificação aplicável.
 5. Em Data Access, manter somente `https://www.googleapis.com/auth/drive.file`. Não ampliar para acesso a todo Drive, Gmail ou e-mail/perfil.
-6. Em Clients, criar **Desktop app** e baixar o JSON. Não escolher Web application, service account, Android ou client ID do navegador.
+6. Reutilizar o cliente **Desktop app** já utilizado no piloto, cujo JSON foi recebido e validado. Não escolher Web application, service account, Android ou client ID do navegador.
 7. Fornecer esse JSON desktop para integração. Confirmar identidade do projeto, escopo, estado de publicação e contato público antes de produzir o instalador oficial.
 
 Testing admite até 100 usuários de teste e, para o escopo usado pelo app, a autorização/refresh token expira após sete dias. Produção não promete tokens eternos: revogação e demais regras do Google continuam válidas. `drive.file` é não sensível, mas isso não elimina as exigências de identidade, marca e políticas. Publicar o app não equivale a ter nome/logo verificados.
@@ -45,8 +45,8 @@ Testing admite até 100 usuários de teste e, para o escopo usado pelo app, a au
 
 ## Pendências de Fernando
 
-- Contato público de suporte desejado e domínio/página oficial sob seu controle.
-- Criar/configurar o projeto Google Cloud e fornecer o JSON do cliente **Desktop app**, ou indicar que quer orientação guiada durante esse processo.
+- Publicar apresentação, privacidade e termos no domínio verificado zagotools.top; suporte definido: zagotools@zagotools.top.
+- Concluir produção e verificação aplicável no projeto atual após publicar as páginas.
 - A alternativa JSON próprio em Avançado permanece como proposta; sua remoção não é necessária para simplificar o primeiro uso comum.
 
 Não houve publicação de projeto Google Cloud nem alteração de credenciais nesta etapa. A configuração real depende de acesso à conta administradora e das informações acima.
@@ -57,3 +57,23 @@ Não houve publicação de projeto Google Cloud nem alteração de credenciais n
 - [Escopos Google Drive](https://developers.google.com/workspace/drive/api/guides/api-specific-auth).
 - [Audience: teste, produção e expiração](https://support.google.com/cloud/answer/15549945?hl=en).
 - [Branding: suporte público, domínio e verificação](https://support.google.com/cloud/answer/15549049?hl=en).
+
+## Implementação 7A
+
+Recurso embutido mínimo (client_id/client_secret desktop), sem tokens pessoais. Resolução no setup: cliente local validado > JSON próprio inicial > recurso oficial. PilotSetup persiste o cliente antes de conectar; atualizações não substituem identidade. Configuração inválida gera erro. JSON próprio continua opcional em Avançado apenas antes da configuração. Escopo drive.file, PKCE, DPAPI e namespaces preservados.
+
+HTTPS solicitado e instalação confirmada pelo painel; acesso ainda a conferir. Remodelação do site, apresentação, privacidade, termos e produção/verificação Google ficam para depois. Esta alteração não declara distribuição pública pronta.
+
+Validação local 7A: 183 testes aprovados, 31 exclusivos do Windows não executados no Linux; build Windows Release com zero avisos/erros. A validação usa testes automatizados, sem login Google real. Etapa 7B e instalador novo ainda pendentes.
+
+## Correção de rota de segurança
+
+JSON real fora do Git/histórico; recurso incluído somente via propriedade DistributionOAuthClientPath no build. Caminho local ignorado. Build sem recurso mantém configuração própria e falha claramente se ela não existir. Distribuição oficial deve exigir recurso e validar tipo desktop antes de publicar; não publicar instalador oficial sem identidade configurada.
+
+Entrega protegida a implementar: job separado de release Windows, GitHub Environment com aprovação/restrição de branch, secret ZAGOSHEETS_OAUTH_DESKTOP_JSON, arquivo temporário fora da árvore versionada, remoção em always, sem JSON/logs nos artifacts. Job de PR/testes não recebe o secret; não usar pull_request_target com checkout de código não confiável. Permissões mínimas, ações fixadas por SHA e varredura de segredos nos arquivos versionados são pendências de endurecimento do pipeline. O instalador inclui configuração desktop extraível por natureza, sem tokens pessoais.
+
+## Configuração do GitHub para gerar a alpha 0.9.7
+
+Workflow manual distribution.yml, somente feature/zagosheetswin, Environment zagosheets-distribution. Criar esse Environment em Settings > Environments; restringir à branch e exigir aprovação se disponível no plano. Adicionar nele o secret ZAGOSHEETS_OAUTH_DESKTOP_JSON com o JSON desktop recebido. O conector atual não oferece configuração de environments/secrets; Fernando precisa completar esse passo no painel.
+
+O workflow falha sem o secret; reduz o JSON a client_id/client_secret, grava em RUNNER_TEMP, incorpora via propriedade de build e remove em always. Testes comuns/PRs continuam sem segredo. Pacote protegido usa versão 0.9.7; não é aprovado até execução bem-sucedida. Artifacts de distribuição contêm o binário com cliente desktop extraível, não o JSON avulso. Não rodar código de contribuições não revisadas com esse ambiente.

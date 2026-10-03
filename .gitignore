@@ -27,3 +27,7 @@ TestResults/
 
 artifacts/
 launcher-client.json
+
+# Distribution OAuth supplied privately at build time
+/src/SheetsWindows.Infrastructure/official-desktop-client.json
+client_secret_*.json

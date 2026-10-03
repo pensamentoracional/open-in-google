@@ -30,8 +30,8 @@ internal sealed class SetupForm : Form
         var toggle = new Button { AutoSize = true, Text = expanded ? "Avançado ▾" : "Avançado ▸" };
         toggle.Click += (_, _) => { advanced.Visible = !advanced.Visible; toggle.Text = advanced.Visible ? "Avançado ▾" : "Avançado ▸"; };
         layout.Controls.Add(toggle); layout.Controls.Add(advanced);
-        advanced.Controls.Add(Info("Cliente OAuth desktop: esta alpha ainda precisa do JSON do seu projeto Google. Ele identifica o aplicativo; você autoriza com sua própria conta. Não é um arquivo de senha."));
-        var chooseClient = new Button { AutoSize = true, Text = "Escolher JSON OAuth…", Enabled = !configured };
+        advanced.Controls.Add(Info("O aplicativo inclui o cliente OAuth Zagotools. Cada pessoa autoriza com sua própria conta Google. JSON próprio é opcional no primeiro uso; instalações configuradas preservam seu cliente."));
+        var chooseClient = new Button { AutoSize = true, Text = "Escolher JSON OAuth…", Enabled = !File.Exists(LauncherConfiguration.ClientPath(storage)) };
         chooseClient.Click += (_, _) => { using var dialog = new OpenFileDialog { Filter = "JSON OAuth|*.json", CheckFileExists = true }; if (dialog.ShowDialog(this) == DialogResult.OK)  { client.Text = dialog.FileName; advanced.Visible = false; toggle.Text = "Avançado ▸"; status.Text = "JSON selecionado. Clique em Salvar e conectar Google."; } };
         advanced.Controls.Add(chooseClient); advanced.Controls.Add(client);
         if (File.Exists(LauncherConfiguration.ClientPath(storage))) client.Text = "Cliente OAuth já configurado — preservado.";
@@ -50,7 +50,7 @@ internal sealed class SetupForm : Form
         var saveXls = new Button { AutoSize = true, Text = "Salvar preferência XLS" };
         saveXls.Click += async (_, _) => { saveXls.Enabled = false; try { await XlsReplacementSettings.SaveAsync(storage, xls.Checked); status.Text = "Preferência XLS salva."; } catch (Exception ex) when (LauncherErrors.Expected(ex)) { status.Text = LauncherErrors.Message(ex); } finally { saveXls.Enabled = true; } };
         advanced.Controls.Add(saveXls);
-        layout.Controls.Add(Info("2. Conecte sua conta Google. A autorização acontece no navegador."));
+        layout.Controls.Add(Info("2. Conecte sua própria conta Google. As planilhas ficam no seu Drive; a autorização acontece no navegador."));
         var connect = new Button { AutoSize = true, Text = "Salvar e conectar Google" };
         var save = new Button { AutoSize = true, Text = "Salvar configurações" };
         var defaults = new Button { AutoSize = true, Text = "Abrir Aplicativos padrão do Windows" };
@@ -62,16 +62,13 @@ internal sealed class SetupForm : Form
         async Task Save(bool authorize)
         {
             if (busy) return;
-            if (!File.Exists(LauncherConfiguration.ClientPath(storage)) && string.IsNullOrWhiteSpace(client.Text))
-            { advanced.Visible = true; toggle.Text = "Avançado ▾"; status.Text = "Nesta alpha, escolha o JSON OAuth em Avançado para conectar. O cliente de distribuição será integrado em uma etapa posterior."; layout.ScrollControlIntoView(chooseClient); chooseClient.Focus(); return; }
             busy = true; layout.Enabled = false; cancel.Visible = authorize; cancel.Enabled = true; status.Text = authorize ? "Salvando e aguardando autorização no navegador…" : "Salvando…";
             try
             {
-                var jsonPath = File.Exists(LauncherConfiguration.ClientPath(storage)) ? LauncherConfiguration.ClientPath(storage) : client.Text;
-                if (new FileInfo(jsonPath).Length > 65536) throw new InvalidDataException("Invalid OAuth client.");
                 await using (var held = await new FileOperationLock(storage.LocksPath).AcquireAsync("windows-registration", cancellation.Token))
                 {
-                    PilotSetup.Configure(storage, await File.ReadAllTextAsync(jsonPath, cancellation.Token), folder.Text, consent.Checked);
+                    var json = await LauncherConfiguration.SetupClientJsonAsync(storage, client.Text, cancellation.Token);
+                    PilotSetup.Configure(storage, json, folder.Text, consent.Checked);
                     ExtendedConfiguration.Save(storage, new(encoding.SelectedIndex == 0 ? "auto" : "windows-1252", delimiter.SelectedIndex switch { 1 => "comma", 2 => "semicolon", _ => "auto" }), extended.Checked);
                     await XlsReplacementSettings.SaveAsync(storage, xls.Checked, cancellation.Token);
                     new WindowsAssociationRegistration(Microsoft.Win32.Registry.CurrentUser).Register(Environment.ProcessPath!); WindowsAssociationRegistration.NotifyShell();
