@@ -12,7 +12,7 @@ internal sealed class SetupForm : Form
     public SetupForm()
     {
         Text = "Configurar piloto — ZagoSheetsWin"; ClientSize = new Size(760, 760); AutoScaleMode = AutoScaleMode.Dpi; StartPosition = FormStartPosition.CenterScreen;
-        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(18), ColumnCount = 1, RowCount = 17, AutoScroll = true };
+        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(18), ColumnCount = 1, RowCount = 18, AutoScroll = true };
         layout.Controls.Add(new Label { AutoSize = true, MaximumSize = new Size(580, 0), Text = "Piloto: arquivos até 20 MiB, sem VBA. CSV/TSV: até 500 mil células, 50 mil linhas e mil colunas. A conversão pode perder recursos do Excel. O backup guarda o original inicial; não existe sincronização de volta. Selecione o JSON OAuth de aplicativo desktop do seu projeto Google e uma pasta dedicada." });
         var chooseClient = new Button { AutoSize = true, Text = "Escolher JSON OAuth desktop" };
         chooseClient.Click += (_, _) => { using var dialog = new OpenFileDialog { Filter = "JSON OAuth|*.json", CheckFileExists = true }; if (dialog.ShowDialog(this) == DialogResult.OK) client.Text = dialog.FileName; };
@@ -28,8 +28,9 @@ internal sealed class SetupForm : Form
         layout.Controls.Add(extended); layout.Controls.Add(encoding); layout.Controls.Add(delimiter);
         try { var previous = ExtendedConfiguration.Load(LocalStorage.ForCurrentUser()); extended.Checked = true; extended.Enabled = false; encoding.Enabled = false; delimiter.Enabled = false; encoding.SelectedIndex = previous.Encoding == "auto" ? 0 : 1; delimiter.SelectedIndex = previous.Delimiter switch { "comma" => 1, "semicolon" => 2, _ => 0 }; }
         catch (LauncherNotConfiguredException) { }
-        var xls = new CheckBox { AutoSize = true, MaximumSize = new Size(580, 0), Checked = XlsReplacementSettings.Load(LocalStorage.ForCurrentUser()), Text = "Substituir XLS por atalho após conferência (padrão). Macros não funcionam no Sheets; fórmulas, vínculos e formatação podem mudar. O original completo fica no backup. Desmarque para conservar o arquivo local." };
+        var xls = new CheckBox { AutoSize = true, MaximumSize = new Size(580, 0), Checked = XlsReplacementSettings.Load(LocalStorage.ForCurrentUser()), Text = "Substituir XLS por atalho após conferência (padrão)." };
         layout.Controls.Add(xls);
+        layout.Controls.Add(new Label { AutoSize = true, MaximumSize = new Size(580, 0), Text = "Macros não funcionam no Sheets; fórmulas, vínculos e formatação podem mudar. O original completo fica no backup. Desmarque a opção para conservar o arquivo local." });
         var saveXls = new Button { AutoSize = true, Text = "Salvar preferência XLS" };
         saveXls.Click += async (_, _) => { saveXls.Enabled = false; try { await XlsReplacementSettings.SaveAsync(LocalStorage.ForCurrentUser(), xls.Checked); status.Text = "Preferência XLS salva. Aplica-se às próximas aberturas e retomadas; arquivos já substituídos podem ser restaurados pelo backup."; } catch (Exception ex) when (LauncherErrors.Expected(ex)) { status.Text = LauncherErrors.Message(ex); } finally { saveXls.Enabled = true; } };
         layout.Controls.Add(saveXls);
