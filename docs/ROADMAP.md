@@ -130,3 +130,8 @@ XLS com substituição por padrão, preferência configurável, conferência de 
 ## Evolução alpha — etapa 3
 
 Instalador curto e primeiro uso na mesma tela (pasta, conexão Google e padrões Windows), JSON e formatos em Avançado, atualização sem repetir onboarding configurado. Versão 0.9.4; [escopo e validação](ALPHA_3_SETUP.md). Plano atualizado com a etapa 8 de internacionalização em 51 idiomas e auditoria inicial de superfícies; traduções ainda pendentes. CI 37097216126 aprovado (182 testes Windows / 153 Linux), instalador e prévias nativas aprovados. Aceite manual Windows 11/Google real pendente.
+
+
+## Evolução alpha — etapa 4
+
+Tela inicial com Abrir planilha, Configurações e Backups; cópia em Avançado. Processamento compacto separado, fechamento no sucesso, cancelamento e erro com recuperação/diagnóstico. Tema claro por padrão com toggle persistente e métricas numéricas por etapa. Versão 0.9.5; [escopo e medidas](ALPHA_4_UI.md). CI, prévias e pacote em validação; aceite real pendente.

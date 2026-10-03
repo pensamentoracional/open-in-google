@@ -69,7 +69,7 @@ public sealed class LauncherTests
     {
         var ex = new HttpRequestException("access_token=secret and private contents");
         Assert.True(LauncherErrors.Expected(ex)); Assert.DoesNotContain("secret", LauncherErrors.Message(ex));
-        Assert.Contains("Autorizar Google", LauncherErrors.Message(new AuthorizationRequiredException()));
+        Assert.Contains("Salvar e conectar Google", LauncherErrors.Message(new AuthorizationRequiredException()));
     }
     private sealed class RejectNetwork : HttpMessageHandler
     {

@@ -37,6 +37,8 @@ Implementada em 0.9.4; ver [ALPHA_3_SETUP.md](ALPHA_3_SETUP.md). CI 37097216126,
 
 ## 4. Interface mínima e processamento
 
+Implementada em 0.9.5; ver [ALPHA_4_UI.md](ALPHA_4_UI.md). CI, prévias e pacote em validação; aceite real pendente.
+
 - Tema: toggle discreto no canto direito do cabeçalho, usando os símbolos do template universal (sol `𖤓` e lua `☾`). Claro inicial; salvar a escolha localmente e aplicá-la às telas do programa. Incluir tooltip, nome acessível, teclado e respeito ao alto contraste do Windows. Validar a renderização dos símbolos no Windows 11.
 - Tela inicial: Abrir planilha, Configurações, Backups; Sobre/MIT acessível de forma discreta. Identidade Zagotools preservada; ícones acompanhados de rótulo/tooltip acessível.
 - Abrir planilha pelo seletor deve usar o fluxo de importação/substituição quando elegível; ação de importar cópia separada nas opções avançadas.

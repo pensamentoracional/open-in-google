@@ -5,7 +5,7 @@ using System.Text.Json;
 namespace SheetsWindows.Infrastructure;
 
 public enum DiagnosticEvent { Started, Completed, Cancelled, AuthorizationRequired, ReconciliationRequired, LocalConflict, ConversionMismatch, Failed }
-public sealed record DiagnosticEntry(DateTimeOffset Time, DiagnosticEvent Event, Guid? Operation);
+public sealed record DiagnosticEntry(DateTimeOffset Time, DiagnosticEvent Event, Guid? Operation, ProcessingMetrics? Metrics = null);
 // Diagnostic files are disposable; durable operation journals and backups are never pruned.
 public sealed class DiagnosticLog(LocalStorage storage)
 {
@@ -20,10 +20,11 @@ public sealed class DiagnosticLog(LocalStorage storage)
         ConversionMismatchException => DiagnosticEvent.ConversionMismatch,
         _ => DiagnosticEvent.Failed
     };
-    public async Task RecordAsync(DiagnosticEvent kind, Guid? operation = null)
+    public async Task RecordAsync(DiagnosticEvent kind, Guid? operation = null, ProcessingMetrics? metrics = null)
     {
         try
         {
+            if (metrics is { IsValid: false }) throw new InvalidDataException("Invalid processing metrics.");
             if (!Enum.IsDefined(kind)) throw new ArgumentException("Unknown diagnostic event.");
             var root = Path.Combine(storage.Root, "logs"); PrivateDirectory.Create(root);
             await using var held = await new FileOperationLock(storage.LocksPath).AcquireAsync("diagnostics");
@@ -33,7 +34,7 @@ public sealed class DiagnosticLog(LocalStorage storage)
                 var candidate = i == 0 ? path : path + "." + i;
                 if (File.Exists(candidate) && (File.GetAttributes(candidate) & FileAttributes.ReparsePoint) != 0) throw new InvalidDataException("Invalid diagnostic file.");
             }
-            var bytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new DiagnosticEntry(DateTimeOffset.UtcNow, kind, operation)) + "\n");
+            var bytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new DiagnosticEntry(DateTimeOffset.UtcNow, kind, operation, metrics)) + "\n");
             if (File.Exists(path) && new FileInfo(path).Length + bytes.Length > MaxFileBytes)
             {
                 var last = path + "." + (FileCount - 1); if (File.Exists(last)) File.Delete(last);
@@ -59,6 +60,7 @@ public sealed class DiagnosticLog(LocalStorage storage)
             foreach (var line in await File.ReadAllLinesAsync(path))
             {
                 var entry = JsonSerializer.Deserialize<DiagnosticEntry>(line) ?? throw new InvalidDataException("Invalid diagnostic entry.");
+                if (entry.Metrics is { IsValid: false }) throw new InvalidDataException("Invalid processing metrics.");
                 if (!Enum.IsDefined(entry.Event)) throw new InvalidDataException("Invalid diagnostic event.");
                 output.AppendLine(JsonSerializer.Serialize(entry)); // Re-serialize only allowlisted fields.
             }

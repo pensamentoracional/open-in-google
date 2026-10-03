@@ -7,7 +7,7 @@ using SheetsWindows.Core;
 namespace SheetsWindows.Infrastructure;
 
 public sealed class GoogleImport(LocalPreparation preparation, IOperationRegistry local, IRemoteRegistry remote,
-    ISourceReader sources, IOperationLock locks, IGoogleAuth auth, GoogleDriveClient drive, TextImportOptions? textOptions = null)
+    ISourceReader sources, IOperationLock locks, IGoogleAuth auth, GoogleDriveClient drive, TextImportOptions? textOptions = null, ProcessingTelemetry? telemetry = null)
 {
     public const int MaxBytes = 20 * 1024 * 1024;
     public async Task<Uri> ImportAsync(string path, CancellationToken ct = default) => (await ImportReceiptAsync(path, ct)).Url;
@@ -29,7 +29,9 @@ public sealed class GoogleImport(LocalPreparation preparation, IOperationRegistr
         if (backup.Length > MaxBytes) throw new SpreadsheetCapacityException("O arquivo excede o limite de 20 MiB para importação.");
         using var buffer = new MemoryStream(); await backup.CopyToAsync(buffer, ct); var bytes = buffer.ToArray();
         if (bytes.LongLength != snapshot.Length || Convert.ToHexString(SHA256.HashData(bytes)) != snapshot.Sha256) throw new InvalidDataException("Snapshot integrity failure.");
-        var payload = await Task.Run(() => SpreadsheetFormats.Prepare(op.Format, bytes, textOptions, ct), ct);
+        SpreadsheetPayload payload;
+        using (telemetry?.Begin(ProcessingPhase.Conversion)) payload = await Task.Run(() => SpreadsheetFormats.Prepare(op.Format, bytes, textOptions, ct), ct);
+        using var uploadTiming = telemetry?.Begin(ProcessingPhase.Upload);
         var canReplace = op.Format == "xlsx" || payload.Expected is not null;
         var sheetKey = "sheet:" + op.Id.ToString("N");
         if (remote.Get(sheetKey) is { } pending)

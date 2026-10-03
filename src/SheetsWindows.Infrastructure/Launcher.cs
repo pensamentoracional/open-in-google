@@ -65,7 +65,7 @@ public static class LauncherErrors
     public static string Message(Exception ex) => ex switch
     {
         LauncherNotConfiguredException => "Conclua o primeiro uso antes de abrir planilhas. Abra o ZagoSheetsWin ou suas Configurações para escolher a pasta e conectar ao Google.",
-        AuthorizationRequiredException => "O Google precisa de autorização. Abra o ZagoSheetsWin e clique em Autorizar Google; depois abra a planilha novamente.",
+        AuthorizationRequiredException => "O Google precisa de autorização. Abra Configurações e clique em Salvar e conectar Google; depois abra a planilha novamente.",
         ReconciliationRequiredException => "A importação aguarda reconciliação. Não repita o upload manualmente. Consulte o guia de recuperação.",
         ConversionMismatchException => "A conferência encontrou diferença nos dados convertidos. O original e o backup foram preservados. Pode existir uma cópia no Google; consulte a recuperação antes de repetir.",
         SpreadsheetCapacityException capacity => capacity.Message + " O original foi preservado. Divida a tabela em arquivos menores para tentar novamente.",
@@ -85,7 +85,7 @@ public static class LauncherErrors
     };
 }
 
-public sealed class WindowsLauncher(LocalStorage storage, HttpClient http, IBrowserLauncher browser)
+public sealed class WindowsLauncher(LocalStorage storage, HttpClient http, IBrowserLauncher browser, ProcessingTelemetry? telemetry = null)
 {
     private GoogleOAuth Auth(OAuthClient client, FileOperationLock locks) => new(http, client,
         new DpapiTokenVault(System.IO.Path.Combine(storage.Root, "auth"), client.Id), new LoopbackAuthorizationReceiver(browser.Open), locks);
@@ -109,13 +109,13 @@ public sealed class WindowsLauncher(LocalStorage storage, HttpClient http, IBrow
         var preparation = storage.CreatePreparation(); var local = new SqliteOperationRegistry(storage.DatabasePath);
         var remote = new GoogleRemoteRegistry(System.IO.Path.Combine(storage.Root, "google.db")); var locks = new FileOperationLock(storage.LocksPath);
         var auth = Auth(client, locks);
-        var importer = new GoogleImport(preparation, local, remote, new SourceReader(), locks, auth, new GoogleDriveClient(http, auth, new UploadSessionStore(Path.Combine(storage.Root, "uploads"))), textOptions);
+        var importer = new GoogleImport(preparation, local, remote, new SourceReader(), locks, auth, new GoogleDriveClient(http, auth, new UploadSessionStore(Path.Combine(storage.Root, "uploads"))), textOptions, telemetry);
         progress?.Report("Abrindo sua planilha no Google Sheets…");
         var receipt = await importer.ImportReceiptAsync(request.Path!, ct);
         if (!receipt.CanReplace) return await PublishCopyAsync(receipt, progress, ct);
-        progress?.Report("Concluindo substituição. Operação: " + receipt.Operation.Id);
+        progress?.Report("Publicando atalho e concluindo substituição…");
         var coordinator = new ReplacementCoordinator(local, remote, new BackupStore(storage.BackupsPath), locks,
-            new ReplacementJournal(System.IO.Path.Combine(storage.Root, "replacement.db")), sources, browser, new ConversionVerifier(new GoogleDriveClient(http, auth), textOptions), ShortcutIcon.Ensure(storage));
+            new ReplacementJournal(System.IO.Path.Combine(storage.Root, "replacement.db")), sources, browser, new ConversionVerifier(new GoogleDriveClient(http, auth), textOptions, telemetry), ShortcutIcon.Ensure(storage));
         return await coordinator.ReplaceAsync(receipt, ct);
     }
     public async Task<string> CopyAsync(string path, IProgress<string>? progress = null, CancellationToken ct = default)
@@ -128,7 +128,7 @@ public sealed class WindowsLauncher(LocalStorage storage, HttpClient http, IBrow
         await using (var preflight = sources.Open(path)) { }
         var locks = new FileOperationLock(storage.LocksPath); var auth = Auth(client, locks);
         var importer = new GoogleImport(storage.CreatePreparation(sources), new SqliteOperationRegistry(storage.DatabasePath),
-            new GoogleRemoteRegistry(Path.Combine(storage.Root, "google.db")), sources, locks, auth, new GoogleDriveClient(http, auth, new UploadSessionStore(Path.Combine(storage.Root, "uploads"))), options);
+            new GoogleRemoteRegistry(Path.Combine(storage.Root, "google.db")), sources, locks, auth, new GoogleDriveClient(http, auth, new UploadSessionStore(Path.Combine(storage.Root, "uploads"))), options, telemetry);
         progress?.Report("Importando cópia; o original será conservado…");
         return await PublishCopyAsync(await importer.ImportReceiptAsync(path, ct), progress, ct);
     }
@@ -152,7 +152,7 @@ public sealed class WindowsLauncher(LocalStorage storage, HttpClient http, IBrow
             await using (var source = sources.Open(path))
             {
                 if (source.Source.IdentityKey != operation.SourceKey || source.Source.Format != operation.Format) throw new LocalConflictException("Source changed.");
-                var importer = new GoogleImport(storage.CreatePreparation(sources), local, remote, sources, locks, auth, drive, options);
+                var importer = new GoogleImport(storage.CreatePreparation(sources), local, remote, sources, locks, auth, drive, options, telemetry);
                 receipt = await importer.ImportReceiptAsync(path, ct);
                 if (receipt.Operation.Id != id) throw new LocalConflictException("Operation changed.");
             }
@@ -171,7 +171,7 @@ public sealed class WindowsLauncher(LocalStorage storage, HttpClient http, IBrow
         if (!receipt.CanReplace || operation.Format == "xls" && !XlsReplacementSettings.Load(storage)) throw new CopyRequiredException();
         var root = await File.ReadAllTextAsync(PilotSetup.PolicyPath(storage), ct);
         return await new ReplacementCoordinator(local, remote, new BackupStore(storage.BackupsPath), locks, journal,
-            new WindowsRetirementReader(root), browser, new ConversionVerifier(drive, options), ShortcutIcon.Ensure(storage)).ReplaceAsync(receipt, ct);
+            new WindowsRetirementReader(root), browser, new ConversionVerifier(drive, options, telemetry), ShortcutIcon.Ensure(storage)).ReplaceAsync(receipt, ct);
     }
 
     private async Task<string> PublishCopyAsync(ImportReceipt receipt, IProgress<string>? progress, CancellationToken ct)

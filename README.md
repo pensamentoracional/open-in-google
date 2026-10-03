@@ -2,6 +2,8 @@
 
 Projeto em preparação: abrir planilhas locais no Google Sheets e substituir o original por um atalho de Internet na mesma pasta, com backup recuperável.
 
+**Em validação — alpha 0.9.5:** [Interface mínima, temas e processamento](docs/ALPHA_4_UI.md).
+
 **Alpha 0.9.4 aprovada:** [Instalação e primeiro uso](docs/ALPHA_3_SETUP.md). [Baixar instalador Windows x64](https://github.com/zagozago/ZagoSheetsWin/actions/runs/37097216126/artifacts/11264632553). CI Windows/Linux, instalador e prévias nativas aprovados; aceite manual Google real/Windows 11 pendente. [Plano atualizado com internacionalização](docs/ALPHA_NEXT.md).
 
 **Alpha 0.9.3:** [XLS padrão e ícone dos atalhos](docs/ALPHA_2_XLS.md). [Baixar instalador aprovado](https://github.com/zagozago/ZagoSheetsWin/actions/runs/37096149671/artifacts/11264247583). CI Windows/Linux e instalador aprovados; aceite Google real/Explorer pendente.

@@ -5,7 +5,9 @@ Tecnologias confirmadas: aplicação WinForms (.NET 10); instalador Inno Setup; 
 | Superfície | Fonte atual | Namespace futuro |
 |---|---|---|
 | Primeiro uso/configuração, confirmação, conexão, avançado, formatos | src/SheetsWindows.Windows/SetupForm.cs | app.setup |
-| Principal, progresso, cancelamento, atualização, cópia | src/SheetsWindows.Windows/LauncherForm.cs | app.home / app.progress |
+| Principal, atualização, cópia | src/SheetsWindows.Windows/LauncherForm.cs | app.home |
+| Progresso, cancelamento, erro e exportação de diagnóstico | src/SheetsWindows.Windows/ProcessingForm.cs | app.progress |
+| Toggle claro/escuro, tooltip, nome/estado/ação acessíveis | src/SheetsWindows.Windows/Branding.cs / ThemeToggle.cs | app.theme |
 | Recuperação, backup, diagnóstico | src/SheetsWindows.Windows/RecoveryForm.cs | app.recovery |
 | Nome, slogan, Sobre/MIT, atribuição | src/SheetsWindows.Windows/Branding.cs | shared.brand / app.about |
 | Explicação pública de erros | src/SheetsWindows.Infrastructure/Launcher.cs (LauncherErrors) | app.errors |

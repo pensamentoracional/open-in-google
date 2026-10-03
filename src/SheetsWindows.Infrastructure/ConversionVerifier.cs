@@ -7,10 +7,11 @@ public interface IConversionVerifier
 {
     Task VerifyAsync(ImportOperation operation, RemoteAttempt mapping, CancellationToken ct);
 }
-public sealed class ConversionVerifier(GoogleDriveClient drive, TextImportOptions? options = null) : IConversionVerifier
+public sealed class ConversionVerifier(GoogleDriveClient drive, TextImportOptions? options = null, ProcessingTelemetry? telemetry = null) : IConversionVerifier
 {
     public async Task VerifyAsync(ImportOperation operation, RemoteAttempt mapping, CancellationToken ct)
     {
+        using var timing = telemetry?.Begin(ProcessingPhase.Verification);
         var snapshot = operation.Snapshot ?? throw new InvalidDataException("Backup required.");
         if (snapshot.Length > GoogleImport.MaxBytes || mapping.FileId is null || !mapping.Verified || mapping.AccountId != operation.AccountId || mapping.Hash != snapshot.Sha256) throw new InvalidDataException("Fidelity binding invalid.");
         await using var file = new FileStream(snapshot.BackupPath, FileMode.Open, FileAccess.Read, FileShare.Read);

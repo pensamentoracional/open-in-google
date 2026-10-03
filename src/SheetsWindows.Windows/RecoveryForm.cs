@@ -47,7 +47,7 @@ internal sealed class RecoveryForm : Form
             if (busy) return;
             using var dialog = new SaveFileDialog { Filter = "Diagnóstico JSONL|*.jsonl", FileName = "sheets-windows-diagnostico.jsonl", OverwritePrompt = true };
             if (dialog.ShowDialog(this) != DialogResult.OK) return;
-            try { await new DiagnosticLog(LocalStorage.ForCurrentUser()).ExportAsync(dialog.FileName); status.Text = "Diagnóstico exportado: apenas eventos, horários e IDs de operação."; }
+            try { await new DiagnosticLog(LocalStorage.ForCurrentUser()).ExportAsync(dialog.FileName); status.Text = "Diagnóstico exportado: eventos, horários, IDs e medidas numéricas, sem arquivos, contas ou conteúdo."; }
             catch (Exception ex) when (LauncherErrors.Expected(ex)) { status.Text = "Escolha um arquivo inexistente para exportar o diagnóstico."; }
         };
         FormClosing += (_, e) => { if (busy) { e.Cancel = true; activeCancellation?.Cancel(); } };

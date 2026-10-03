@@ -47,6 +47,18 @@ jobs:
           if (!$probe.WaitForExit(30000)) { $probe.Kill(); throw 'Launcher startup timed out' }
           if ($probe.ExitCode -ne 0) { throw 'Published launcher failed to start' }
 
+      - name: Verify native interface offline
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $exe = Join-Path (Get-Location).Path 'artifacts/SheetsWindows-win-x64/SheetsWindows.exe'
+          $output = Join-Path (Get-Location).Path 'artifacts/branding-preview/native-verification.json'
+          New-Item -ItemType Directory -Force (Split-Path $output) | Out-Null
+          $errorFile = Join-Path (Get-Location).Path 'artifacts/native-verification-error.txt'
+          $process = Start-Process -FilePath $exe -ArgumentList @('--verify-interface', $output) -RedirectStandardError $errorFile -PassThru
+          if (!$process.WaitForExit(30000)) { $process.Kill(); throw 'Native interface verification timed out' }
+          if ($process.ExitCode -ne 0) { Get-Content $errorFile; throw 'Native interface verification failed' }
+          Get-Content $output
       - name: Render native branding previews offline
         if: runner.os == 'Windows'
         shell: pwsh
@@ -56,7 +68,7 @@ jobs:
           $process = Start-Process -FilePath $exe -ArgumentList @('--preview-branding', $output) -PassThru
           if (!$process.WaitForExit(30000)) { $process.Kill(); throw 'Branding render timed out' }
           if ($process.ExitCode -ne 0) { throw 'Branding render failed' }
-          foreach ($file in @('home.png', 'setup.png', 'first-use.png', 'setup-advanced.png', 'recovery.png', 'about.png')) {
+          foreach ($file in @('home.png', 'setup.png', 'first-use.png', 'setup-advanced.png', 'recovery.png', 'about.png', 'processing.png', 'processing-error.png', 'home-dark.png', 'setup-dark.png', 'processing-dark.png', 'processing-error-dark.png')) {
             if (!(Test-Path (Join-Path $output $file))) { throw "Missing preview: $file" }
           }
       - uses: actions/upload-artifact@v4
