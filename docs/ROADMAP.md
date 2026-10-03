@@ -110,3 +110,8 @@ Branch feature/robustness: sessões de upload protegidas e retomáveis, consulta
 ## Progresso da etapa 9
 
 Consolidação técnica concluída na branch feature/zagosheetswin, versão 0.9.1 (CI 36926691912 aprovado, 170 testes Windows / 142 Linux, instalador e revisão visual aprovados): identidade Zagotools e nome público ZagoSheetsWin, origem/Swati K/MIT preservados, migração de nome com proteção de valores alheios e roteiro único STAGE_9.md. Conforme alinhamento, homologação manual Windows 11/Google real fica para depois do pacote final; os testes automatizados continuam sendo requisito de cada alteração. Sem expansão para Word/Linux.
+
+
+## Próxima evolução alpha
+
+Ver [plano atualizado](ALPHA_NEXT.md): correção reproduzida do CSV de 200.000 células, ampliação de capacidade com medições, XLS com substituição habilitada por padrão e opção configurável, atalhos .url com ícone fornecido, instalação/primeiro uso/interface mínimos e gestão de backups. Retenção/teto ainda são propostas a definir; .ico aguarda envio. Novas planilhas ficam em incremento separado. Evidências do uso real registradas no plano, sem encerrar aceite de recuperação/reabertura.
