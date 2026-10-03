@@ -65,6 +65,8 @@ Implementada em 0.9.6; CI 37119038565, interface e instalador aprovados. Aceite 
 
 ## 7. OAuth de distribuição — proposta em definição
 
+Auditoria e especificação registradas em [ALPHA_7_OAUTH.md](ALPHA_7_OAUTH.md). A integração depende do cliente desktop oficial, contato público e domínio do Zagotools. Instalador aprovado permanece 0.9.6.
+
 - Cliente OAuth desktop oficial identifica ZagoSheetsWin; não embutir login, senha ou tokens pessoais do mantenedor. Cada usuário autoriza com sua própria conta Google e os arquivos ficam no Drive desse usuário.
 - Projeto Google Cloud sob controle do Zagotools; conta dedicada é recomendação organizacional, não requisito técnico. Configurar público externo, produção, identidade da marca, contato de suporte, privacidade e exigências aplicáveis do Google antes de distribuição pública.
 - Manter permissões mínimas (`drive.file`) e separar projetos de teste e produção. O modo de teste tem restrições de usuários e duração da autorização, incompatíveis com distribuição cotidiana.

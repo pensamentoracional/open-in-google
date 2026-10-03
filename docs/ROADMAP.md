@@ -140,3 +140,8 @@ Tela inicial com Abrir planilha, Configurações e Backups; cópia em Avançado.
 ## Evolução alpha — etapa 6
 
 Gestão de backups: 30 dias / 200 MB, teto configurável até 1 GB, consentimento para limpeza automática, limpeza manual e histórico preservado. Versão 0.9.6; [regras e proteções](ALPHA_6_BACKUPS.md). CI 37119038565 aprovado (211 testes Windows / 181 Linux), interface nativa, prévias de Backups e instalador aprovados; aceite real pendente.
+
+
+## Evolução alpha — etapa 7
+
+[OAuth de distribuição](ALPHA_7_OAUTH.md): auditoria e especificação concluídas. Cliente oficial para novas instalações; instalações existentes preservam cliente e histórico. Provisionamento Google Cloud, contato público, domínio, integração e testes reais pendentes. Não declarar cliente incorporado nem distribuição pública pronta.
