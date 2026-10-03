@@ -16,12 +16,11 @@ internal sealed class ProcessingForm : Form
     public int ExitCode { get; private set; }
     internal bool IsBusy => busy;
     internal ProcessingMetrics? LastMetrics { get; private set; }
-    internal void CancelOperation() => cancellation.Cancel();
     public ProcessingForm(LauncherRequest request, long? startedAt = null, bool preview = false, bool previewError = false,
         Func<IProgress<string>, CancellationToken, Task>? execute = null, bool recordDiagnostics = true)
     {
         if (request.Action is not (LauncherAction.Open or LauncherAction.Copy or LauncherAction.Login)) throw new ArgumentException("Processing request required.");
-        this.request = request; this.execute = execute; this.recordDiagnostics = recordDiagnostics; this.startedAt = startedAt;
+        this.request = request; this.execute = execute; this.recordDiagnostics = recordDiagnostics; this.startedAt = startedAt ?? System.Diagnostics.Stopwatch.GetTimestamp();
         Text = "Abrindo no Google Sheets — ZagoSheetsWin"; ClientSize = new Size(620, 240); MinimumSize = new Size(620, 240);
         StartPosition = FormStartPosition.CenterScreen; AutoScaleMode = AutoScaleMode.Dpi;
         cancel.Click += (_, _) => { if (busy) { cancellation.Cancel(); cancel.Enabled = false; status.Text = "Interrompendo com segurança…"; } else Close(); };

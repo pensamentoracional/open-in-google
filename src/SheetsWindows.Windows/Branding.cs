@@ -32,7 +32,9 @@ internal static class Branding
             var green = highContrast ? SystemColors.Highlight : dark ? Color.FromArgb(98, 217, 139) : Color.FromArgb(25, 134, 74);
             control.BackColor = control is Button or TextBox or ComboBox or ListBox ? panel : background;
             control.ForeColor = foreground;
-            if (control is Button button) { button.FlatStyle = highContrast ? FlatStyle.System : FlatStyle.Flat; button.FlatAppearance.BorderColor = green; }
+            if (control is Button button) { button.FlatStyle = highContrast ? FlatStyle.System : FlatStyle.Flat; button.FlatAppearance.BorderColor = green; button.UseVisualStyleBackColor = false;
+                button.FlatAppearance.MouseOverBackColor = highContrast ? SystemColors.Highlight : dark ? Color.FromArgb(18, 37, 26) : Color.FromArgb(244, 250, 246);
+                button.FlatAppearance.MouseDownBackColor = button.FlatAppearance.MouseOverBackColor; }
             if (control is LinkLabel link) { link.LinkColor = green; link.ActiveLinkColor = foreground; link.VisitedLinkColor = green; }
             foreach (Control child in control.Controls) Theme(child);
             control.Invalidate();
@@ -43,7 +45,7 @@ internal static class Branding
         var picture = new PictureBox { Image = logo, SizeMode = PictureBoxSizeMode.Zoom, Dock = DockStyle.Left, Width = compact ? 105 : 130 };
         form.Disposed += (_, _) => logo.Dispose();
         var title = new Label { Text = Name + (compact ? "" : "\nPlanilhas no Google Sheets"), Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft, Padding = new Padding(10, 0, 0, 0) };
-        var right = new FlowLayoutPanel { Dock = DockStyle.Right, Width = aboutButton ? 180 : 88, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, Padding = new Padding(0, 5, 0, 0) };
+        var right = new FlowLayoutPanel { Dock = DockStyle.Right, Width = aboutButton ? 204 : 88, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, Padding = new Padding(0, 5, 0, 0) };
         var toggle = new ThemeToggle { Width = 80, Height = 32 };
         var tooltip = new ToolTip();
         void UpdateToggle() { toggle.Dark = Current == ApplicationTheme.Dark; toggle.AccessibleName = toggle.Dark ? "Ativar modo claro" : "Ativar modo escuro"; tooltip.SetToolTip(toggle, toggle.AccessibleName); toggle.Invalidate(); }
@@ -56,7 +58,7 @@ internal static class Branding
         };
         if (aboutButton)
         {
-            var about = new LinkLabel { Text = "Sobre / MIT", AutoSize = false, Width = 90, Height = 32, TextAlign = ContentAlignment.MiddleCenter, TabStop = true, AccessibleName = "Sobre o ZagoSheetsWin e licença MIT" };
+            var about = new LinkLabel { Text = "Sobre / MIT", AutoSize = false, Width = 110, Height = 32, TextAlign = ContentAlignment.MiddleCenter, TabStop = true, AccessibleName = "Sobre o ZagoSheetsWin e licença MIT" };
             about.LinkClicked += (_, _) => { using var info = new AboutForm(); info.ShowDialog(form); }; right.Controls.Add(about);
         }
         right.Controls.Add(toggle); header.Controls.Add(title); header.Controls.Add(picture); header.Controls.Add(right);

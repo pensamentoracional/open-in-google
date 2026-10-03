@@ -5,6 +5,7 @@ namespace SheetsWindows.Infrastructure;
 public enum ProcessingPhase { Conversion, Upload, Verification }
 public sealed record ProcessingMetrics(long ElapsedMs, long? ReadyMs, long? ConversionMs, long? UploadMs, long? VerificationMs, long? PeakWorkingSetBytes, long? CpuMs)
 {
+    [System.Text.Json.Serialization.JsonIgnore]
     public bool IsValid => ElapsedMs >= 0 && ReadyMs is null or >= 0 && ConversionMs is null or >= 0 && UploadMs is null or >= 0 && VerificationMs is null or >= 0 && PeakWorkingSetBytes is null or >= 0 && CpuMs is null or >= 0;
 }
 // Numeric, per-run counters only. No source path, account, content or upload URL.

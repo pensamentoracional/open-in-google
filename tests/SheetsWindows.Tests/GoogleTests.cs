@@ -186,12 +186,15 @@ public sealed class GoogleTests
     public async Task BinaryXlsDefaultRetiresOnlyAfterVerificationAndCanBeConfiguredToCopy()
     {
         using var w = new Workspace(); var path = Path.ChangeExtension(w.Source, ".xls"); var bytes = FormatTests.Xls(); File.WriteAllBytes(path, bytes); ConfigureLauncher(w, out var storage);
-        using var server = new DriveServer(); using var http = new HttpClient(server); var launcher = new WindowsLauncher(storage, http, new LauncherBrowser());
-        var shortcut = await launcher.OpenAsync(path); Assert.True(File.Exists(shortcut)); Assert.False(File.Exists(path)); Assert.Contains("IconFile=" + Path.Combine(storage.Root, "shortcut-icon-v1.ico"), File.ReadAllText(shortcut)); Assert.Equal("application/vnd.ms-excel", Assert.Single(server.MediaTypes));
+        using var server = new DriveServer(); using var http = new HttpClient(server); var telemetry = new ProcessingTelemetry(); var launcher = new WindowsLauncher(storage, http, new LauncherBrowser(), telemetry);
+        var shortcut = await launcher.OpenAsync(path); Assert.NotNull(telemetry.Capture().ConversionMs); Assert.NotNull(telemetry.Capture().UploadMs); Assert.NotNull(telemetry.Capture().VerificationMs);
+        Assert.True(File.Exists(shortcut)); Assert.False(File.Exists(path)); Assert.Contains("IconFile=" + Path.Combine(storage.Root, "shortcut-icon-v1.ico"), File.ReadAllText(shortcut)); Assert.Equal("application/vnd.ms-excel", Assert.Single(server.MediaTypes));
         Assert.Equal(bytes, File.ReadAllBytes(Assert.Single(w.Registry().Pending()).Snapshot!.BackupPath)); Assert.Equal(1, server.Exports);
         var second = Path.Combine(w.Root, "copia.xls"); File.WriteAllBytes(second, bytes);
         await XlsReplacementSettings.SaveAsync(storage, false);
-        await launcher.OpenAsync(second); Assert.Equal(bytes, File.ReadAllBytes(second)); Assert.Equal(1, server.Exports);
+        var copyMetrics = new ProcessingTelemetry();
+        await new WindowsLauncher(storage, http, new LauncherBrowser(), copyMetrics).OpenAsync(second); Assert.Equal(bytes, File.ReadAllBytes(second)); Assert.Equal(1, server.Exports);
+        Assert.NotNull(copyMetrics.Capture().ConversionMs); Assert.NotNull(copyMetrics.Capture().UploadMs); Assert.Null(copyMetrics.Capture().VerificationMs);
     }
     [WindowsFact]
     public async Task XlsMismatchPreservesOriginalAndResumesSameUpload()

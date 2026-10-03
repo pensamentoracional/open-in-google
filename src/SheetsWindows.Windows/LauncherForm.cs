@@ -6,7 +6,7 @@ internal sealed class LauncherForm : Form
 {
     private readonly Label status = new() { AutoSize = true, MaximumSize = new Size(540, 0), Text = "Abra uma planilha para importar para o Google Sheets. O original é substituído por um atalho após as verificações, com backup." };
     public int ExitCode { get; private set; }
-    public LauncherForm(LauncherRequest request)
+    public LauncherForm(LauncherRequest request, bool expanded = false)
     {
         if (request.Action != LauncherAction.Home) throw new ArgumentException("Home request required.");
         Text = "ZagoSheetsWin"; ClientSize = new Size(620, 345); MinimumSize = new Size(620, 345); StartPosition = FormStartPosition.CenterScreen; AutoScaleMode = AutoScaleMode.Dpi;
@@ -34,5 +34,6 @@ internal sealed class LauncherForm : Form
         }));
         advanced.Controls.Add(Action("Atualizações", (_, _) => { try { new BrowserLauncher().Open(new Uri("https://github.com/zagozago/ZagoSheetsWin/actions/workflows/local-core.yml")); } catch (Exception ex) when (LauncherErrors.Expected(ex)) { status.Text = "Consulte o guia da versão no repositório para atualizar."; } }));
         layout.Controls.Add(toggle); layout.Controls.Add(advanced); Controls.Add(layout); Branding.Apply(this, compact: true);
+        if (expanded) { advanced.Visible = true; toggle.Text = "Avançado ▾"; toggle.AccessibleName = "Ocultar opções avançadas"; ClientSize = new Size(620, 490); }
     }
 }
