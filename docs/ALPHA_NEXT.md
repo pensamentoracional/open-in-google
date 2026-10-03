@@ -136,3 +136,7 @@ Etapa adicionada em 03/10/2026. Escopo aprovado para planejamento; traduções, 
 5. Internacionalização: auditar e preparar catálogo/infraestrutura durante a revisão das telas; concluir os 51 packs, integrar instalador e aplicativo e validar antes de anunciar suporte multilíngue completo. Não bloquear as correções urgentes de CSV/XLS com a tradução integral.
 
 Manter versão alpha e distribuir pacote novo com evidências Windows/Linux/instalador. Não marcar aceite manual restante como concluído por inferência do relato.
+
+## Reformulação de UX/UI — 0.9.10
+
+Implementação: fontes e componentes compartilhados, tutorial e textos revisados, configurações compactas e tabela de backups. Referências: UI_TEXTS_PT_BR.md e UI_REDESIGN.md. A tradução ocorre após o aceite visual e funcional. Build local e testes devem passar; instalador e prévias Windows dependem da aprovação do ambiente protegido. Fase 2: escalas de tela, teclado, temas e preservação na atualização.

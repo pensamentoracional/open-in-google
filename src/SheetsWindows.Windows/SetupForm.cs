@@ -14,43 +14,43 @@ internal sealed class SetupForm : Form
     {
         var storage = LocalStorage.ForCurrentUser();
         Text = firstUse ? "Primeiro uso — ZagoSheetsWin" : "Configurações — ZagoSheetsWin";
-        ClientSize = new Size(760, 760); MinimumSize = new Size(650, 620); AutoScaleMode = AutoScaleMode.Dpi; StartPosition = FormStartPosition.CenterScreen;
+        ClientSize = new Size(560, 700); MinimumSize = new Size(480, 520); AutoScaleMode = AutoScaleMode.Dpi; StartPosition = FormStartPosition.CenterScreen;
         var layout = new FlowLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(18), FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true };
-        Label Info(string text) => new() { AutoSize = true, MaximumSize = new Size(570, 0), Text = text, Margin = new Padding(3, 6, 3, 6) };
-        layout.Controls.Add(Info("Ao abrir uma planilha, o programa importa para o Sheets e substitui o original por um atalho após as verificações. O backup guarda o arquivo inicial completo, não as edições futuras no Google."));
-        layout.Controls.Add(Info("1. Escolha uma pasta local de planilhas, fora de OneDrive e rede."));
+        Label Info(string text) => Ui.Text(text);
+        layout.Controls.Add(Info("Vamos preparar o aplicativo para abrir suas planilhas no Google Sheets.\n\nApós conferir a importação, o aplicativo guarda um backup e substitui o original por um atalho. O backup não inclui as alterações feitas depois no Sheets."));
+        layout.Controls.Add(Ui.Separator()); layout.Controls.Add(Ui.Text("1. Pasta de planilhas", true)); layout.Controls.Add(Info("Escolha uma pasta no computador, fora do OneDrive e de pastas de rede."));
         var chooseFolder = new Button { AutoSize = true, Text = "Escolher pasta…" };
         chooseFolder.Click += (_, _) => { using var dialog = new FolderBrowserDialog(); if (dialog.ShowDialog(this) == DialogResult.OK) folder.Text = dialog.SelectedPath; };
         layout.Controls.Add(chooseFolder); layout.Controls.Add(folder);
         var configured = !FirstUseState.NeedsSetup(storage);
         var policy = PilotSetup.PolicyPath(storage); if (File.Exists(policy)) { folder.Text = File.ReadAllText(policy); chooseFolder.Enabled = false; }
-        var consent = new CheckBox { AutoSize = true, Checked = configured, Text = "Confirmo a pasta local e aceito a substituição com backup." };
+        var consent = new CheckBox { AutoSize = true, Checked = configured, Text = "Confirmo que a pasta é local e aceito substituir o original por um atalho, com backup." };
         layout.Controls.Add(consent);
         var advanced = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false, Visible = expanded, MaximumSize = new Size(590, 0) };
-        var toggle = new Button { AutoSize = true, Text = expanded ? "Avançado ▾" : "Avançado ▸" };
-        toggle.Click += (_, _) => { advanced.Visible = !advanced.Visible; toggle.Text = advanced.Visible ? "Avançado ▾" : "Avançado ▸"; };
-        layout.Controls.Add(toggle); layout.Controls.Add(advanced);
-        advanced.Controls.Add(Info("O aplicativo inclui o cliente OAuth Zagotools. Cada pessoa autoriza com sua própria conta Google. JSON próprio é opcional no primeiro uso; instalações configuradas preservam seu cliente."));
-        var chooseClient = new Button { AutoSize = true, Text = "Escolher JSON OAuth…", Enabled = !File.Exists(LauncherConfiguration.ClientPath(storage)) };
-        chooseClient.Click += (_, _) => { using var dialog = new OpenFileDialog { Filter = "JSON OAuth|*.json", CheckFileExists = true }; if (dialog.ShowDialog(this) == DialogResult.OK)  { client.Text = dialog.FileName; advanced.Visible = false; toggle.Text = "Avançado ▸"; status.Text = "JSON selecionado. Clique em Salvar e conectar Google."; } };
+        var toggle = new Button { AutoSize = true, Text = expanded ? "Opções avançadas ▾" : "Opções avançadas ▸" };
+        toggle.Click += (_, _) => { advanced.Visible = !advanced.Visible; toggle.Text = advanced.Visible ? "Opções avançadas ▾" : "Opções avançadas ▸"; };
+
+        advanced.Controls.Add(Info("Conexão Google\nO aplicativo já inclui a configuração de conexão. Cada pessoa entra com sua própria conta. Um JSON próprio é opcional. A configuração existente é mantida."));
+        var chooseClient = new Button { AutoSize = true, Text = "Escolher arquivo JSON de conexão…", Enabled = !File.Exists(LauncherConfiguration.ClientPath(storage)) };
+        chooseClient.Click += (_, _) => { using var dialog = new OpenFileDialog { Filter = "JSON OAuth|*.json", CheckFileExists = true }; if (dialog.ShowDialog(this) == DialogResult.OK)  { client.Text = dialog.FileName; advanced.Visible = false; toggle.Text = "Opções avançadas ▸"; status.Text = "JSON selecionado. Clique em Salvar e conectar Google."; } };
         advanced.Controls.Add(chooseClient); advanced.Controls.Add(client);
-        if (File.Exists(LauncherConfiguration.ClientPath(storage))) client.Text = "Cliente OAuth já configurado — preservado.";
+        if (File.Exists(LauncherConfiguration.ClientPath(storage))) client.Text = "Configuração de conexão existente mantida.";
         var extended = new CheckBox { AutoSize = true, Checked = true, Text = "Habilitar CSV, TSV, XLS e ODS (experimental)." };
         var encoding = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 570 };
         encoding.Items.AddRange(["Texto: UTF-8 / UTF-16 com BOM", "Texto: Windows-1252"]); encoding.SelectedIndex = 0;
         var delimiter = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 570 };
         delimiter.Items.AddRange(["CSV: detectar separador", "CSV: vírgula", "CSV: ponto e vírgula"]); delimiter.SelectedIndex = 0;
-        advanced.Controls.Add(extended); advanced.Controls.Add(encoding); advanced.Controls.Add(delimiter);
-        advanced.Controls.Add(Info("Até 20 MiB por arquivo; CSV/TSV: 500 mil células, 50 mil linhas e mil colunas. Texto literal; ODS não verificável conserva o original. Preferências de texto existentes são preservadas."));
+        advanced.Controls.Add(Ui.Separator()); advanced.Controls.Add(Ui.Text("Formatos e texto", true)); advanced.Controls.Add(extended); advanced.Controls.Add(encoding); advanced.Controls.Add(delimiter);
+        advanced.Controls.Add(Info("Até 20 MiB por arquivo.\nCSV/TSV: 500 mil células, 50 mil linhas e mil colunas.\n\nO conteúdo é tratado como texto literal. Se a conversão de ODS não puder ser conferida, o original é mantido. Suas preferências de texto são preservadas."));
         try { var previous = ExtendedConfiguration.Load(storage); extended.Enabled = false; encoding.Enabled = false; delimiter.Enabled = false; encoding.SelectedIndex = previous.Encoding == "auto" ? 0 : 1; delimiter.SelectedIndex = previous.Delimiter switch { "comma" => 1, "semicolon" => 2, _ => 0 }; }
         catch (LauncherNotConfiguredException) { }
-        var xls = new CheckBox { AutoSize = true, Checked = XlsReplacementSettings.Load(storage), Text = "Substituir XLS por atalho após conferência." };
-        advanced.Controls.Add(xls);
+        var xls = new CheckBox { AutoSize = true, Checked = XlsReplacementSettings.Load(storage), Text = "Substituir XLS por atalho após as verificações." };
+        advanced.Controls.Add(Ui.Separator()); advanced.Controls.Add(Ui.Text("Arquivos XLS", true)); advanced.Controls.Add(xls);
         advanced.Controls.Add(Info("Macros não funcionam no Sheets. Fórmulas, vínculos e formatação podem mudar. O backup conserva o original completo. Desmarque para importar XLS como cópia."));
-        var saveXls = new Button { AutoSize = true, Text = "Salvar preferência XLS" };
+        var saveXls = new Button { AutoSize = true, Text = "Salvar escolha para arquivos XLS" };
         saveXls.Click += async (_, _) => { saveXls.Enabled = false; try { await XlsReplacementSettings.SaveAsync(storage, xls.Checked); status.Text = "Preferência XLS salva."; } catch (Exception ex) when (LauncherErrors.Expected(ex)) { status.Text = LauncherErrors.Message(ex); } finally { saveXls.Enabled = true; } };
         advanced.Controls.Add(saveXls);
-        layout.Controls.Add(Info("2. " + (FirstUseState.NeedsAuthorization(storage) ? "Google ainda não conectado. Conecte sua própria conta e aceite a autorização no navegador." : "Google já conectado. Sua configuração foi preservada.") + " As planilhas ficam no seu Drive."));
+        layout.Controls.Add(Ui.Separator()); layout.Controls.Add(Ui.Text("2. Conta Google", true)); layout.Controls.Add(Info( (FirstUseState.NeedsAuthorization(storage) ? "Clique em Salvar e conectar Google. No navegador, escolha sua conta e autorize o acesso. Depois, volte aqui." : "Google conectado. Sua configuração foi mantida.") + " As planilhas ficam no seu Drive."));
         var connect = new Button { AutoSize = true, Text = "Salvar e conectar Google" };
         var save = new Button { AutoSize = true, Text = "Salvar configurações" };
         var defaults = new Button { AutoSize = true, Text = "Abrir Aplicativos padrão do Windows" };
@@ -85,14 +85,14 @@ internal sealed class SetupForm : Form
             finally { busy = false; layout.Enabled = true; cancel.Visible = false; if (cancellation.IsCancellationRequested) connect.Enabled = save.Enabled = false; }
         }
         connect.Click += async (_, _) => await Save(true); save.Click += async (_, _) => await Save(false);
-        layout.Controls.Add(connect); if (!firstUse) layout.Controls.Add(save);
-        layout.Controls.Add(Info("3. Para abrir com dois cliques: no Windows, procure ZagoSheetsWin e associe CSV, XLS e XLSX. TSV é opcional; ODS é experimental. Depois volte aqui. Você também pode usar botão direito > Abrir com > ZagoSheetsWin, ou Abrir planilha no aplicativo."));
+        Ui.Primary(FirstUseState.NeedsAuthorization(storage) ? connect : save); layout.Controls.Add(Ui.Separator()); layout.Controls.Add(connect); if (!firstUse) layout.Controls.Add(save);
+        layout.Controls.Add(Ui.Separator()); layout.Controls.Add(Ui.Text("3. Quer abrir com dois cliques?", true)); layout.Controls.Add(Info("Nos Aplicativos padrão do Windows, escolha ZagoSheetsWin para CSV, XLS e XLSX. Depois, volte aqui.\n\nEssa escolha é opcional. Você também pode usar Abrir com → ZagoSheetsWin ou Abrir planilha no aplicativo.\n\nTSV também disponível. ODS experimental."));
         defaults.Click += (_, _) => { try { new BrowserLauncher().Open(WindowsAssociationPlan.DefaultsUri); } catch (Exception ex) when (LauncherErrors.Expected(ex)) { status.Text = "Abra Configurações > Aplicativos > Aplicativos padrão e procure ZagoSheetsWin."; } };
-        layout.Controls.Add(defaults); layout.Controls.Add(status); layout.Controls.Add(finish);
+        layout.Controls.Add(defaults); layout.Controls.Add(Ui.Separator()); layout.Controls.Add(toggle); layout.Controls.Add(advanced); layout.Controls.Add(status); layout.Controls.Add(finish);
         finish.Click += (_, _) => Close();
         Controls.Add(layout); Controls.Add(cancel); cancel.Dock = DockStyle.Bottom;
         FormClosing += (_, e) => { if (busy) { e.Cancel = true; cancellation.Cancel(); } };
-        Branding.Apply(this);
+        Branding.Apply(this); Ui.Adapt(layout); Ui.Adapt(advanced);
     }
     protected override void Dispose(bool disposing) { if (disposing) cancellation.Dispose(); base.Dispose(disposing); }
 }

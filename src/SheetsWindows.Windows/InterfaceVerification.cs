@@ -9,6 +9,12 @@ internal static class InterfaceVerification
     {
         var measurements = new Dictionary<string, ProcessingMetrics>();
         void Require(bool value, string detail) { if (!value) throw new InvalidOperationException(detail); }
+        using (var action = new MenuActionButton())
+        {
+            var invoked = 0; action.Click += (_, _) => invoked++;
+            action.InvokeAction(); action.Enabled = false; action.InvokeAction();
+            Require(invoked == 1, "Recovery menu must invoke enabled handlers and refuse disabled actions.");
+        }
         Branding.PreviewTheme(ApplicationTheme.Light);
         using var home = new LauncherForm(new(LauncherAction.Home));
         using var preview = new ProcessingForm(new(LauncherAction.Open, "preview.xlsx"), preview: true);
@@ -19,11 +25,12 @@ internal static class InterfaceVerification
         {
             recovery.Show(); Application.DoEvents();
             var stop = Descendants(recovery).OfType<Button>().Single(b => b.Text == "Cancelar retomada");
-            var list = Descendants(recovery).OfType<ListBox>().Single();
+            var list = Descendants(recovery).OfType<ListView>().Single();
             Require(stop.Visible && stop.Enabled && !stop.Bounds.IntersectsWith(list.Bounds) && stop.Bottom <= recovery.ClientSize.Height, "Recovery cancellation must remain visible outside the list.");
             var numbers = Descendants(recovery).OfType<NumericUpDown>().ToArray();
             Require(numbers.Any(n => n.Value == 30 && n.Maximum == 365) && numbers.Any(n => n.Value == 200 && n.Maximum == 1000), "Backup defaults and quota ceiling must be visible.");
             Require(!Descendants(recovery).OfType<CheckBox>().Single().Checked, "Automatic cleanup requires informed opt-in.");
+            Require(list.Columns.Count == 4 && list.Items.Cast<ListViewItem>().All(i => i.Tag is RecoveryEntry), "Backup table must preserve recovery identity and expose four readable columns.");
             Require(list.Items.Count == 3, "Backup preview must cover completed, protected and cleaned history.");
             foreach (var button in Descendants(recovery).OfType<Button>().Where(b => b.Visible)) Require(button.Bottom <= button.Parent!.ClientSize.Height && button.Right <= button.Parent.ClientSize.Width, "Backup actions must fit their container.");
             recovery.Hide();
@@ -35,9 +42,11 @@ internal static class InterfaceVerification
             var next = Descendants(tutorial).OfType<Button>().Single(b => b.Text == "Próximo");
             for (var i = 0; i < 3; i++) next.PerformClick();
             Require(next.Text == "Começar", "Tutorial must reach its final page.");
-            Descendants(tutorial).OfType<Button>().Single(b => b.Text == "Pular").PerformClick();
+            Descendants(tutorial).OfType<Button>().Single(b => b.Text == "Pular tutorial").PerformClick();
             Require(!tutorial.Visible, "Tutorial must be skippable on the final page.");
         }
+        Require(home.Font.Name == "Segoe UI", "Native interface must use the shared readable font.");
+        Require(Descendants(home).OfType<Button>().Any(b => b.Tag as string == "primary" && b.Text.Contains("Abrir planilha")), "Home must emphasize its primary action.");
         var light = home.BackColor;
         Branding.PreviewTheme(ApplicationTheme.Dark);
         Require(home.BackColor != light && home.BackColor == preview.BackColor, "Theme must update open forms together.");

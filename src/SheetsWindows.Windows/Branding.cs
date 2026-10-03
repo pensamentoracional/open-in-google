@@ -21,7 +21,7 @@ internal static class Branding
     public static void Apply(Form form, bool aboutButton = true, bool compact = false)
     {
         using (var stream = typeof(Branding).Assembly.GetManifestResourceStream("Brand.icon.ico")!) form.Icon = new Icon(stream);
-        form.Font = new Font("Consolas", 10);
+        form.Font = new Font("Segoe UI", 10);
         void Theme(Control control)
         {
             var highContrast = SystemInformation.HighContrast;
@@ -37,17 +37,29 @@ internal static class Branding
                 button.FlatAppearance.MouseDownBackColor = button.FlatAppearance.MouseOverBackColor; }
             if (control is LinkLabel link) { link.LinkColor = green; link.ActiveLinkColor = foreground; link.VisitedLinkColor = green; }
             foreach (Control child in control.Controls) Theme(child);
+            if (control.Tag as string == "separator") control.BackColor = highContrast ? SystemColors.WindowText : dark ? Color.FromArgb(61, 79, 68) : Color.FromArgb(211, 225, 216);
+            if (control is Button primary && primary.Tag as string == "primary" && !highContrast)
+            {
+                primary.BackColor = Color.FromArgb(18, 126, 69); primary.ForeColor = Color.White;
+                primary.FlatAppearance.MouseOverBackColor = Color.FromArgb(16, 108, 60);
+                if (!primary.Font.Bold) primary.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+            }
+            if (control is ListView list)
+            {
+                list.BackColor = panel; list.ForeColor = foreground;
+                foreach (ListViewItem item in list.Items) { item.BackColor = panel; item.ForeColor = foreground; }
+            }
             control.Invalidate();
         }
         var header = new Panel { Dock = DockStyle.Top, Height = compact ? 60 : 70, Padding = new Padding(12, 8, 12, 8) };
-        using var source = typeof(Branding).Assembly.GetManifestResourceStream(compact ? "Brand.z.png" : "Brand.logo.png")!;
+        using var source = typeof(Branding).Assembly.GetManifestResourceStream("Brand.z.png")!;
         using var original = Image.FromStream(source); var logo = new Bitmap(original);
-        var picture = new PictureBox { Image = logo, SizeMode = PictureBoxSizeMode.Zoom, Dock = DockStyle.Left, Width = compact ? 40 : 130 };
+        var picture = new PictureBox { Image = logo, SizeMode = PictureBoxSizeMode.Zoom, Dock = DockStyle.Left, Width = 36 };
         form.Disposed += (_, _) => logo.Dispose();
-        var title = new Label { Text = Name + (compact ? "" : "\nPlanilhas no Google Sheets"), Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft, Padding = new Padding(10, 0, 0, 0) };
-        if (compact) title.Font = new Font("Segoe UI", 15, FontStyle.Bold);
-        var right = new FlowLayoutPanel { Dock = DockStyle.Right, Width = aboutButton ? (compact ? 188 : 204) : 88, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, Padding = new Padding(0, 5, 0, 0) };
-        var toggle = new ThemeToggle { Width = 80, Height = 32 };
+        var title = new Label { Text = Name, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft, Padding = new Padding(10, 0, 0, 0) };
+        title.Font = new Font("Segoe UI", 13, FontStyle.Bold);
+        var right = new FlowLayoutPanel { Dock = DockStyle.Right, Width = aboutButton ? 176 : 88, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, Padding = new Padding(0, 5, 0, 0) };
+        var toggle = new ThemeToggle { Width = 72, Height = 30 };
         var tooltip = new ToolTip();
         void UpdateToggle() { toggle.Dark = Current == ApplicationTheme.Dark; toggle.AccessibleName = toggle.Dark ? "Ativar modo claro" : "Ativar modo escuro"; tooltip.SetToolTip(toggle, toggle.AccessibleName); toggle.Invalidate(); }
         toggle.Click += async (_, _) =>
@@ -59,7 +71,7 @@ internal static class Branding
         };
         if (aboutButton)
         {
-            var about = new LinkLabel { Text = "Sobre / MIT", AutoSize = false, Width = compact ? 100 : 110, Height = 32, TextAlign = ContentAlignment.MiddleCenter, TabStop = true, AccessibleName = "Sobre o ZagoSheetsWin e licença MIT" };
+            var about = new LinkLabel { Text = "Sobre / MIT", AutoSize = false, Width = 90, Height = 32, TextAlign = ContentAlignment.MiddleCenter, TabStop = true, AccessibleName = "Sobre o ZagoSheetsWin e licença MIT" };
             about.LinkClicked += (_, _) => { using var info = new AboutForm(); info.ShowDialog(form); }; right.Controls.Add(about);
         }
         right.Controls.Add(toggle); header.Controls.Add(title); header.Controls.Add(picture); header.Controls.Add(right);
@@ -78,7 +90,7 @@ internal sealed class AboutForm : Form
     {
         Text = "Sobre — ZagoSheetsWin / Zagotools"; ClientSize = new Size(810, 520); MinimumSize = new Size(600, 400); AutoScaleMode = AutoScaleMode.Dpi; StartPosition = FormStartPosition.CenterParent;
         var body = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, Padding = new Padding(18), AutoScroll = true };
-        body.Controls.Add(new Label { AutoSize = true, MaximumSize = new Size(740, 0), Text = "ZagoSheetsWin 0.9.9 — Zagotools\n\nZagoSheetsWin é uma evolução do projeto Open in Google, de Swati K (SwatiK425), desenvolvida pelo Zagotools e distribuída sob licença MIT.\n\nCopyright (c) 2026 Swati K. A autoria e a licença originais foram preservadas." });
+        body.Controls.Add(new Label { AutoSize = true, MaximumSize = new Size(740, 0), Text = "ZagoSheetsWin 0.9.10 — Zagotools\n\nZagoSheetsWin é uma evolução do projeto Open in Google, de Swati K (SwatiK425), desenvolvida pelo Zagotools e distribuída sob licença MIT.\n\nCopyright (c) 2026 Swati K. A autoria e a licença originais foram preservadas." });
         foreach (var item in new[] { ("Projeto original — Open in Google", "https://github.com/SwatiK425/open-in-google/"), ("Autora original — SwatiK425", "https://github.com/SwatiK425"), ("Código da evolução — Zagotools", "https://github.com/zagozago/ZagoSheetsWin") })
         {
             var link = new LinkLabel { Text = item.Item1, AutoSize = true, Margin = new Padding(0, 8, 0, 8) };
