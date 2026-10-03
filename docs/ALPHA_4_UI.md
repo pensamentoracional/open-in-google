@@ -1,6 +1,6 @@
 # Alpha 0.9.5 — interface mínima e processamento
 
-Etapa 4 do plano alpha. Implementação WinForms nativa; sem serviço residente. Pacote em validação no CI.
+Etapa 4 do plano alpha. Implementação WinForms nativa; sem serviço residente. Pacote aprovado no CI 37101501901; aceite manual final Windows 11/Google real pendente.
 
 ## Uso
 
@@ -33,4 +33,21 @@ CI Windows gera medidas offline de exibição/fechamento, cancelamento e erro, a
 
 Local: 158 testes aprovados / 30 exclusivos Windows ignorados; build WinForms sem warnings/erros. Regressões adicionais cobrem tema claro sem criação de estado, alternância/persistência independente de XLS, tema inválido preservado, métricas só das fases alcançadas, descarte de campos sensíveis/inesperados e rejeição de métricas negativas. Testes nativos no CI verificam troca de tema nas janelas abertas e estado acessível, fechamento automático no sucesso, fechamento que cancela o worker e erro que permanece com recuperação/diagnóstico e layout do cancelamento de retomada sem sobreposição com a lista.
 
-Prévias previstas: início compacto e avançado, primeiro uso, configurações compactas e avançadas, backups em repouso e com cancelamento de retomada, Sobre, progresso e erro em claro; início compacto e avançado, configurações, progresso e erro em escuro. Revisão dessas imagens, CI e pacote ainda pendentes. Fontes/ícones, DPI 125/150/200%, alto contraste e Google real no Windows 11 ficam no aceite final; não confundir QA do runner com essa homologação.
+Prévias previstas: início compacto e avançado, primeiro uso, configurações compactas e avançadas, backups em repouso e com cancelamento de retomada, Sobre, progresso e erro em claro; início compacto e avançado, configurações, progresso e erro em escuro. As 15 prévias nativas foram revisadas: rótulos, créditos, símbolos e ações completos, áreas avançadas com rolagem quando necessário e cancelamento de retomada sem sobreposição. CI e pacote aprovados. Fontes/ícones, DPI 125/150/200%, alto contraste e Google real no Windows 11 ficam no aceite final; não confundir QA do runner com essa homologação.
+
+## Evidências e pacote aprovado
+
+[CI 37101501901](https://github.com/zagozago/ZagoSheetsWin/actions/runs/37101501901), commit `6be12ef84dd1366787105f0cde719b189b49b54b`: Windows 187 testes aprovados / 1 exclusivo Unix ignorado; Linux 158 aprovados / 30 exclusivos Windows ignorados. Zero falhas. Verificação nativa de interface, encerramento do processo, compilação do instalador, instalação, atualização, bloqueio de downgrade, desinstalação e reinstalação aprovados; configuração, autorização, preferências, ícone, backups, atalhos e padrões preservados. Instalação silenciosa sem janela mantida.
+
+[Medidas brutas do runner Windows](metrics/alpha-0.9.5-native.json), offline, uma execução e instância já aquecida:
+
+| Sonda | Janela pronta | Resultado total | Conversão | Conferência |
+|---|---:|---:|---:|---:|
+| Sucesso com worker simulado | 58 ms | 74 ms | — | — |
+| Cancelamento com worker simulado | 40 ms | 72 ms | — | — |
+| Erro simulado | 31 ms | 69 ms | — | — |
+| CSV sintético 5.000 × 40, 2.505.600 bytes | — | 1.894 ms | 459 ms | 1.432 ms |
+
+CSV fez round-trip local de valores, sem Google/exportação remota; CPU acumulada 2.375 ms e pico de working set do processo 137,6 MiB. CPU acumulada pode superar tempo de parede por incluir várias threads. Pico amostrado de CPU 3,97% pertence somente à sonda de interface com espera de 350 ms; não representa a conversão CSV nem upload. O round-trip síncrono offline não teve sampler de UI e registra PeakCpuPercent null. A importação normal executa o worker fora da UI e amostra CPU enquanto processa. Não extrapolar essas sondas para latência de lançamento a frio pelo Explorer, upload Google ou desempenho em outra máquina.
+
+[Baixar instalador alpha 0.9.5 — Windows x64](https://github.com/zagozago/ZagoSheetsWin/actions/runs/37101501901/artifacts/11265857512). ZIP contém `ZagoSheetsWin-Setup-win-x64.exe`; SHA-256 do ZIP: `1251fa5a06c6f7b32fb958e2139d535c91400afd2627cc7f1f19858b705e684e`. Download exige login no GitHub; retenção até 01/01/2027. Pode atualizar a instalação atual preservando estado; não limpar configuração para experimentar o tema. Gestão de expiração/quota de backups, cliente OAuth oficial e internacionalização completa continuam nas etapas próprias.

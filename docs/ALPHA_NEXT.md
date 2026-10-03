@@ -1,6 +1,6 @@
 # Próxima evolução alpha — ZagoSheetsWin
 
-Decisões e prioridades alinhadas com Fernando em 03/10/2026. Este documento descreve trabalho aprovado e propostas; não declara implementação nem homologação concluídas. Pacote aprovado: 0.9.4 (etapas 1, 2 e 3); CI Windows/Linux, instalador e prévias nativas aprovados. Teste Google real desta correção permanece pendente.
+Decisões e prioridades alinhadas com Fernando em 03/10/2026. Este documento descreve trabalho aprovado e propostas; não declara implementação nem homologação concluídas. Pacote aprovado: 0.9.5 (etapas 1, 2, 3 e 4); CI Windows/Linux, instalador e prévias nativas aprovados. Teste Google real desta correção permanece pendente.
 
 ## Evidências do piloto real
 
@@ -37,7 +37,7 @@ Implementada em 0.9.4; ver [ALPHA_3_SETUP.md](ALPHA_3_SETUP.md). CI 37097216126,
 
 ## 4. Interface mínima e processamento
 
-Implementada em 0.9.5; ver [ALPHA_4_UI.md](ALPHA_4_UI.md). CI, prévias e pacote em validação; aceite real pendente.
+Implementada em 0.9.5; ver [ALPHA_4_UI.md](ALPHA_4_UI.md). CI 37101501901, interface nativa, 15 prévias e instalador aprovados; aceite manual Windows 11/Google real pendente.
 
 - Tema: toggle discreto no canto direito do cabeçalho, usando os símbolos do template universal (sol `𖤓` e lua `☾`). Claro inicial; salvar a escolha localmente e aplicá-la às telas do programa. Incluir tooltip, nome acessível, teclado e respeito ao alto contraste do Windows. Validar a renderização dos símbolos no Windows 11.
 - Tela inicial: Abrir planilha, Configurações, Backups; Sobre/MIT acessível de forma discreta. Identidade Zagotools preservada; ícones acompanhados de rótulo/tooltip acessível.

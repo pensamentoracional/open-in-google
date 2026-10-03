@@ -1,0 +1,60 @@
+{
+  "ciRun": 37101501901,
+  "codeCommit": "6be12ef84dd1366787105f0cde719b189b49b54b",
+  "Measurements": {
+    "OfflineSuccessUi": {
+      "ElapsedMs": 74,
+      "ReadyMs": 58,
+      "ConversionMs": null,
+      "UploadMs": null,
+      "VerificationMs": null,
+      "PeakWorkingSetBytes": 61980672,
+      "CpuMs": 15,
+      "PeakCpuPercent": null
+    },
+    "OfflineSampledCpuUi": {
+      "ElapsedMs": 403,
+      "ReadyMs": 31,
+      "ConversionMs": null,
+      "UploadMs": null,
+      "VerificationMs": null,
+      "PeakWorkingSetBytes": 62402560,
+      "CpuMs": 15,
+      "PeakCpuPercent": 3.96832250055366
+    },
+    "OfflineCancelledUi": {
+      "ElapsedMs": 72,
+      "ReadyMs": 40,
+      "ConversionMs": null,
+      "UploadMs": null,
+      "VerificationMs": null,
+      "PeakWorkingSetBytes": 63631360,
+      "CpuMs": 15,
+      "PeakCpuPercent": null
+    },
+    "OfflineFailureUi": {
+      "ElapsedMs": 69,
+      "ReadyMs": 31,
+      "ConversionMs": null,
+      "UploadMs": null,
+      "VerificationMs": null,
+      "PeakWorkingSetBytes": 64774144,
+      "CpuMs": 15,
+      "PeakCpuPercent": null
+    },
+    "OfflineCsv5000x40RoundTrip": {
+      "ElapsedMs": 1894,
+      "ReadyMs": null,
+      "ConversionMs": 459,
+      "UploadMs": null,
+      "VerificationMs": 1432,
+      "PeakWorkingSetBytes": 144285696,
+      "CpuMs": 2375,
+      "PeakCpuPercent": null
+    }
+  },
+  "InputBytes": 2505600,
+  "Rows": 5000,
+  "Columns": 40,
+  "GoogleNetwork": false
+}

@@ -134,4 +134,4 @@ Instalador curto e primeiro uso na mesma tela (pasta, conexão Google e padrões
 
 ## Evolução alpha — etapa 4
 
-Tela inicial com Abrir planilha, Configurações e Backups; cópia em Avançado. Processamento compacto separado, fechamento no sucesso, cancelamento e erro com recuperação/diagnóstico. Tema claro por padrão com toggle persistente e métricas numéricas por etapa. Versão 0.9.5; [escopo e medidas](ALPHA_4_UI.md). CI, prévias e pacote em validação; aceite real pendente.
+Tela inicial com Abrir planilha, Configurações e Backups; cópia em Avançado. Processamento compacto separado, fechamento no sucesso, cancelamento e erro com recuperação/diagnóstico. Tema claro por padrão com toggle persistente e métricas numéricas por etapa. Versão 0.9.5; [escopo e medidas](ALPHA_4_UI.md). CI 37101501901 aprovado (187 testes Windows / 158 Linux), interface nativa, 15 prévias e instalador aprovados. Aceite manual Windows 11/Google real pendente.
