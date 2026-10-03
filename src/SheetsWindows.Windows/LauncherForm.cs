@@ -43,7 +43,7 @@ internal sealed class LauncherForm : Form
         var updates = new Button { Text = "Atualizações", AutoSize = true };
         updates.Click += (_, _) => { if (!busy) { try { new BrowserLauncher().Open(new Uri("https://github.com/zagozago/ZagoSheetsWin/actions/workflows/local-core.yml")); status.Text = "Escolha um pacote de CI aprovado e confira seu hash no guia da versão. Feche o aplicativo e execute o instalador; os backups e a configuração serão preservados."; } catch (Exception ex) when (LauncherErrors.Expected(ex)) { status.Text = "Consulte o guia da versão no repositório para atualizar."; } } };
         buttons.Controls.AddRange([setup, login, defaults, recovery, copy, shortcuts, updates, cancel]); Controls.Add(status); Controls.Add(buttons);
-        status.Text = "Abra uma planilha da pasta local configurada. CSV, TSV e ODS simples são conferidos antes da substituição. XLS e ODS complexos conservam o original. Para OneDrive ou rede, use Importar cópia; o atalho fica na pasta privada do aplicativo.";
+        status.Text = "Abra uma planilha da pasta local configurada. CSV, TSV e ODS simples são conferidos antes da substituição. XLS substitui por atalho após conferência, conforme a preferência; ODS complexos conservam o original. Para OneDrive ou rede, use Importar cópia; o atalho fica na pasta privada do aplicativo.";
         cancel.Click += (_, _) => { if (busy) { cancellation.Cancel(); cancel.Enabled = false; status.Text = "Interrompendo com segurança…"; } else Close(); };
         login.Click += async (_, _) => await RunAsync(LauncherAction.Login);
         defaults.Click += (_, _) => OpenDefaults();

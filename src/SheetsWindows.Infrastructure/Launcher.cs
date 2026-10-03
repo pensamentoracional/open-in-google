@@ -100,7 +100,7 @@ public sealed class WindowsLauncher(LocalStorage storage, HttpClient http, IBrow
         var client = await LauncherConfiguration.LoadClientAsync(storage, ct);
         var policy = System.IO.Path.Combine(storage.Root, "replacement-root.txt");
         if (!File.Exists(policy)) throw new LauncherNotConfiguredException();
-        if (SpreadsheetFormats.Format(path) == "xls") return await CopyAsync(path, progress, ct);
+        if (SpreadsheetFormats.Format(path) == "xls" && !XlsReplacementSettings.Load(storage)) return await CopyAsync(path, progress, ct);
         var root = await File.ReadAllTextAsync(policy, ct); var sources = new WindowsRetirementReader(root);
         await using (var eligibility = sources.Open(request.Path!)) { }
         progress?.Report("Conferindo arquivo e backup…");
@@ -114,7 +114,7 @@ public sealed class WindowsLauncher(LocalStorage storage, HttpClient http, IBrow
         if (!receipt.CanReplace) return await PublishCopyAsync(receipt, progress, ct);
         progress?.Report("Concluindo substituição. Operação: " + receipt.Operation.Id);
         var coordinator = new ReplacementCoordinator(local, remote, new BackupStore(storage.BackupsPath), locks,
-            new ReplacementJournal(System.IO.Path.Combine(storage.Root, "replacement.db")), sources, browser, new ConversionVerifier(new GoogleDriveClient(http, auth), textOptions));
+            new ReplacementJournal(System.IO.Path.Combine(storage.Root, "replacement.db")), sources, browser, new ConversionVerifier(new GoogleDriveClient(http, auth), textOptions), ShortcutIcon.Ensure(storage));
         return await coordinator.ReplaceAsync(receipt, ct);
     }
     public async Task<string> CopyAsync(string path, IProgress<string>? progress = null, CancellationToken ct = default)
@@ -167,17 +167,17 @@ public sealed class WindowsLauncher(LocalStorage storage, HttpClient http, IBrow
             receipt = new(operation, GoogleDriveClient.Editor(mapping.FileId), path);
         }
         if (!replace) return await PublishCopyAsync(receipt, progress, ct);
-        if (!receipt.CanReplace || operation.Format == "xls") throw new CopyRequiredException();
+        if (!receipt.CanReplace || operation.Format == "xls" && !XlsReplacementSettings.Load(storage)) throw new CopyRequiredException();
         var root = await File.ReadAllTextAsync(PilotSetup.PolicyPath(storage), ct);
         return await new ReplacementCoordinator(local, remote, new BackupStore(storage.BackupsPath), locks, journal,
-            new WindowsRetirementReader(root), browser, new ConversionVerifier(drive, options)).ReplaceAsync(receipt, ct);
+            new WindowsRetirementReader(root), browser, new ConversionVerifier(drive, options), ShortcutIcon.Ensure(storage)).ReplaceAsync(receipt, ct);
     }
 
     private async Task<string> PublishCopyAsync(ImportReceipt receipt, IProgress<string>? progress, CancellationToken ct)
     {
         await using var held = await new FileOperationLock(storage.LocksPath).AcquireAsync(receipt.Operation.SourceKey, ct);
         var folder = Path.Combine(storage.Root, "shortcuts"); PrivateDirectory.Create(folder);
-        var shortcut = Path.Combine(folder, receipt.Operation.Id.ToString("N") + ".url"); var bytes = InternetShortcut.Bytes(receipt.Url);
+        var shortcut = Path.Combine(folder, receipt.Operation.Id.ToString("N") + ".url"); var bytes = InternetShortcut.ForExisting(shortcut, receipt.Url, ShortcutIcon.Ensure(storage));
         if (!File.Exists(shortcut)) InternetShortcut.Publish(shortcut, bytes);
         using var checkedShortcut = InternetShortcut.Hold(shortcut, bytes);
         ct.ThrowIfCancellationRequested(); browser.Open(receipt.Url);

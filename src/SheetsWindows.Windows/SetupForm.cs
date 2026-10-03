@@ -12,7 +12,7 @@ internal sealed class SetupForm : Form
     public SetupForm()
     {
         Text = "Configurar piloto — ZagoSheetsWin"; ClientSize = new Size(760, 760); AutoScaleMode = AutoScaleMode.Dpi; StartPosition = FormStartPosition.CenterScreen;
-        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(18), ColumnCount = 1, RowCount = 15, AutoScroll = true };
+        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(18), ColumnCount = 1, RowCount = 17, AutoScroll = true };
         layout.Controls.Add(new Label { AutoSize = true, MaximumSize = new Size(580, 0), Text = "Piloto: arquivos até 20 MiB, sem VBA. CSV/TSV: até 500 mil células, 50 mil linhas e mil colunas. A conversão pode perder recursos do Excel. O backup guarda o original inicial; não existe sincronização de volta. Selecione o JSON OAuth de aplicativo desktop do seu projeto Google e uma pasta dedicada." });
         var chooseClient = new Button { AutoSize = true, Text = "Escolher JSON OAuth desktop" };
         chooseClient.Click += (_, _) => { using var dialog = new OpenFileDialog { Filter = "JSON OAuth|*.json", CheckFileExists = true }; if (dialog.ShowDialog(this) == DialogResult.OK) client.Text = dialog.FileName; };
@@ -20,7 +20,7 @@ internal sealed class SetupForm : Form
         var chooseFolder = new Button { AutoSize = true, Text = "Escolher pasta local não sincronizada" };
         chooseFolder.Click += (_, _) => { using var dialog = new FolderBrowserDialog(); if (dialog.ShowDialog(this) == DialogResult.OK) folder.Text = dialog.SelectedPath; };
         layout.Controls.Add(chooseFolder); layout.Controls.Add(folder); layout.Controls.Add(consent);
-        var extended = new CheckBox { AutoSize = true, MaximumSize = new Size(580, 0), Text = "Habilitar CSV, TSV, ODS e XLS. CSV/TSV serão tratados como texto literal; ODS simples terá os valores conferidos. XLS e ODS com recursos não verificáveis serão importados como cópia, conservando o original." };
+        var extended = new CheckBox { AutoSize = true, MaximumSize = new Size(580, 0), Text = "Habilitar CSV, TSV, ODS e XLS. CSV/TSV serão tratados como texto literal; ODS simples terá os valores conferidos. ODS com recursos não verificáveis será importado como cópia, conservando o original." };
         var encoding = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 420 };
         encoding.Items.AddRange(["Automático: UTF-8 / UTF-16 com BOM", "Windows-1252 (escolha explícita)"]); encoding.SelectedIndex = 0;
         var delimiter = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 420 };
@@ -28,6 +28,11 @@ internal sealed class SetupForm : Form
         layout.Controls.Add(extended); layout.Controls.Add(encoding); layout.Controls.Add(delimiter);
         try { var previous = ExtendedConfiguration.Load(LocalStorage.ForCurrentUser()); extended.Checked = true; extended.Enabled = false; encoding.Enabled = false; delimiter.Enabled = false; encoding.SelectedIndex = previous.Encoding == "auto" ? 0 : 1; delimiter.SelectedIndex = previous.Delimiter switch { "comma" => 1, "semicolon" => 2, _ => 0 }; }
         catch (LauncherNotConfiguredException) { }
+        var xls = new CheckBox { AutoSize = true, MaximumSize = new Size(580, 0), Checked = XlsReplacementSettings.Load(LocalStorage.ForCurrentUser()), Text = "Substituir XLS por atalho após conferência (padrão). Macros não funcionam no Sheets; fórmulas, vínculos e formatação podem mudar. O original completo fica no backup. Desmarque para conservar o arquivo local." };
+        layout.Controls.Add(xls);
+        var saveXls = new Button { AutoSize = true, Text = "Salvar preferência XLS" };
+        saveXls.Click += async (_, _) => { saveXls.Enabled = false; try { await XlsReplacementSettings.SaveAsync(LocalStorage.ForCurrentUser(), xls.Checked); status.Text = "Preferência XLS salva. Aplica-se às próximas aberturas e retomadas; arquivos já substituídos podem ser restaurados pelo backup."; } catch (Exception ex) when (LauncherErrors.Expected(ex)) { status.Text = LauncherErrors.Message(ex); } finally { saveXls.Enabled = true; } };
+        layout.Controls.Add(saveXls);
         var save = new Button { Text = "Salvar configuração", AutoSize = true };
         save.Click += async (_, _) =>
         {
@@ -40,6 +45,7 @@ internal sealed class SetupForm : Form
                 await using var held = await new FileOperationLock(storage.LocksPath).AcquireAsync("windows-registration");
                 PilotSetup.Configure(storage, await File.ReadAllTextAsync(jsonPath), folder.Text, consent.Checked);
                 ExtendedConfiguration.Save(storage, new TextImportOptions(encoding.SelectedIndex == 0 ? "auto" : "windows-1252", delimiter.SelectedIndex switch { 1 => "comma", 2 => "semicolon", _ => "auto" }), extended.Checked);
+                await XlsReplacementSettings.SaveAsync(storage, xls.Checked);
                 new WindowsAssociationRegistration(Microsoft.Win32.Registry.CurrentUser).Register(Environment.ProcessPath!);
                 WindowsAssociationRegistration.NotifyShell(); ExitCode = 0;
                 status.Text = "Configuração salva. Feche esta tela, autorize o Google e escolha o aplicativo padrão na tela principal. Se uma planilha estava aguardando, abra-a novamente.";

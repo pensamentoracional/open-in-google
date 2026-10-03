@@ -65,14 +65,30 @@ public sealed class ReplacementJournal
 
 public static class InternetShortcut
 {
-    public static byte[] Bytes(Uri url)
+    public static byte[] Bytes(Uri url, string? iconPath = null)
     {
         var parts = url.AbsolutePath.Split('/');
         if (url.Scheme != "https" || url.Host != "docs.google.com" || !url.IsDefaultPort || url.UserInfo != "" || url.Query != "" || url.Fragment != ""
             || parts.Length != 5 || parts[1] != "spreadsheets" || parts[2] != "d" || parts[4] != "edit") throw new ArgumentException("Invalid Sheets editor URL.");
         GoogleDriveClient.ValidateId(parts[3]);
         if (GoogleDriveClient.Editor(parts[3]) != url) throw new ArgumentException("Noncanonical URL.");
-        return Encoding.UTF8.GetBytes("[InternetShortcut]\r\nURL=" + url.AbsoluteUri + "\r\n");
+        if (iconPath is not null && (!Path.IsPathFullyQualified(iconPath) || iconPath.Any(char.IsControl))) throw new ArgumentException("Invalid icon path.");
+        return Encoding.UTF8.GetBytes("[InternetShortcut]\r\nURL=" + url.AbsoluteUri + "\r\n" + (iconPath is null ? "" : "IconFile=" + iconPath + "\r\nIconIndex=0\r\n"));
+    }
+    public static byte[] ForExisting(string path, Uri url, string? iconPath)
+    {
+        var plain = Bytes(url);
+        // Legacy shortcuts keep their exact bytes during recovery; never rewrite a foreign file.
+        if (File.Exists(path))
+        {
+            using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            if (file.Length == plain.Length)
+            {
+                var current = new byte[plain.Length]; file.ReadExactly(current);
+                if (current.SequenceEqual(plain)) return plain;
+            }
+        }
+        return Bytes(url, iconPath);
     }
     public static string Choose(string source, Guid id)
     {
@@ -107,7 +123,7 @@ public static class InternetShortcut
 }
 
 public sealed class ReplacementCoordinator(IOperationRegistry local, IRemoteRegistry remote, IBackupStore backups,
-    IOperationLock locks, ReplacementJournal journal, IRetirementReader sources, IBrowserLauncher browser, IConversionVerifier? conversion = null)
+    IOperationLock locks, ReplacementJournal journal, IRetirementReader sources, IBrowserLauncher browser, IConversionVerifier? conversion = null, string? iconPath = null)
 {
     public async Task<string> ReplaceAsync(ImportReceipt receipt, CancellationToken ct = default)
     {
@@ -128,7 +144,7 @@ public sealed class ReplacementCoordinator(IOperationRegistry local, IRemoteRegi
         var mapping = remote.Get("sheet:" + op.Id.ToString("N"));
         if (mapping is not { Verified: true, Kind: "sheet", FileId: not null } || mapping.AccountId != op.AccountId || mapping.Hash != snapshot.Sha256
             || GoogleDriveClient.Editor(mapping.FileId) != receipt.Url) throw new InvalidOperationException("Verified Google association required.");
-        var bytes = InternetShortcut.Bytes(receipt.Url);
+        var bytes = InternetShortcut.Bytes(receipt.Url, iconPath);
         await backups.VerifyAsync(op.Id, snapshot, ct);
         // Keep verified backup protected against mutation until source retirement finishes.
         await using var backup = new FileStream(snapshot.BackupPath, FileMode.Open, FileAccess.Read, FileShare.Read);
@@ -136,6 +152,7 @@ public sealed class ReplacementCoordinator(IOperationRegistry local, IRemoteRegi
         var sourcePath = Path.GetFullPath(receipt.SourcePath ?? op.SourcePath);
         var record = journal.Get(op.Id) ?? journal.Begin(op.Id, InternetShortcut.Choose(sourcePath, op.Id), receipt.Url, sourcePath);
         if (record.Url != receipt.Url.AbsoluteUri || (record.SourcePath ?? op.SourcePath) != sourcePath || Path.GetDirectoryName(record.ShortcutPath) != Path.GetDirectoryName(sourcePath)) throw new LocalConflictException("Replacement binding changed.");
+        bytes = InternetShortcut.ForExisting(record.ShortcutPath, receipt.Url, iconPath);
         if (record.Step == 0)
         {
             // A crash may leave our complete file before its journal transition; verify exact bytes on resume.

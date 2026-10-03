@@ -41,9 +41,9 @@ public static class SpreadsheetFormats
                 var expected = ReadOds(bytes);
                 return new(bytes, "application/vnd.oasis.opendocument.spreadsheet", expected);
             case "xls":
-                // Binary XLS cannot prove absence of legacy macros/formulas. Always preserve it.
-                _ = ReadExcel(bytes, binary: true);
-                return new(bytes, "application/vnd.ms-excel", null);
+                // Compare cached cell values; the full binary backup preserves legacy resources.
+                var legacy = ReadExcel(bytes, binary: true, ct: ct);
+                return new(bytes, "application/vnd.ms-excel", legacy);
             default: throw new NotSupportedException("Unsupported spreadsheet format.");
         }
     }

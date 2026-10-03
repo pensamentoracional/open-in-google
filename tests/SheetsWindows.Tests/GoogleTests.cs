@@ -89,7 +89,7 @@ public sealed class GoogleTests
                 Exports++;
                 if (ExportUnauthorizedOnce) { ExportUnauthorizedOnce = false; return new(HttpStatusCode.Unauthorized); }
                 var id = path.Split('/')[^2]; var upload = Uploaded[id];
-                var bytes = ExportOverride ?? (MediaTypes.Last() == "application/vnd.oasis.opendocument.spreadsheet" ? SpreadsheetFormats.WriteXlsx(SpreadsheetFormats.ReadOds(upload)!) : upload);
+                var bytes = ExportOverride ?? (MediaTypes.Last() == "application/vnd.oasis.opendocument.spreadsheet" ? SpreadsheetFormats.WriteXlsx(SpreadsheetFormats.ReadOds(upload)!) : MediaTypes.Last() == "application/vnd.ms-excel" ? SpreadsheetFormats.WriteXlsx(SpreadsheetFormats.ReadExcel(upload, binary: true)) : upload);
                 return new(HttpStatusCode.OK) { Content = new ByteArrayContent(bytes) };
             }
             if (Get401) { Get401 = false; return new(HttpStatusCode.Unauthorized); }
@@ -183,12 +183,27 @@ public sealed class GoogleTests
         Assert.Equal(shortcut, await launcher.CopyAsync(path)); Assert.Equal(2, server.Posts); Assert.Equal(0, server.Exports); Assert.Empty(Directory.GetFiles(w.Root, "*.url"));
     }
     [WindowsFact]
-    public async Task BinaryXlsUsesItsOwnMimeKeepsBackupAndNeverRetires()
+    public async Task BinaryXlsDefaultRetiresOnlyAfterVerificationAndCanBeConfiguredToCopy()
     {
         using var w = new Workspace(); var path = Path.ChangeExtension(w.Source, ".xls"); var bytes = FormatTests.Xls(); File.WriteAllBytes(path, bytes); ConfigureLauncher(w, out var storage);
         using var server = new DriveServer(); using var http = new HttpClient(server); var launcher = new WindowsLauncher(storage, http, new LauncherBrowser());
-        var shortcut = await launcher.OpenAsync(path); Assert.True(File.Exists(shortcut)); Assert.Equal(bytes, File.ReadAllBytes(path)); Assert.Equal("application/vnd.ms-excel", Assert.Single(server.MediaTypes));
-        Assert.Equal(bytes, File.ReadAllBytes(Assert.Single(w.Registry().Pending()).Snapshot!.BackupPath)); Assert.Equal(0, server.Exports);
+        var shortcut = await launcher.OpenAsync(path); Assert.True(File.Exists(shortcut)); Assert.False(File.Exists(path)); Assert.Contains("IconFile=" + Path.Combine(storage.Root, "shortcut-icon-v1.ico"), File.ReadAllText(shortcut)); Assert.Equal("application/vnd.ms-excel", Assert.Single(server.MediaTypes));
+        Assert.Equal(bytes, File.ReadAllBytes(Assert.Single(w.Registry().Pending()).Snapshot!.BackupPath)); Assert.Equal(1, server.Exports);
+        var second = Path.Combine(w.Root, "copia.xls"); File.WriteAllBytes(second, bytes);
+        await XlsReplacementSettings.SaveAsync(storage, false);
+        await launcher.OpenAsync(second); Assert.Equal(bytes, File.ReadAllBytes(second)); Assert.Equal(1, server.Exports);
+    }
+    [WindowsFact]
+    public async Task XlsMismatchPreservesOriginalAndResumesSameUpload()
+    {
+        using var w = new Workspace(); var path = Path.ChangeExtension(w.Source, ".xls"); var bytes = FormatTests.Xls(); File.WriteAllBytes(path, bytes); ConfigureLauncher(w, out var storage);
+        using var server = new DriveServer { ExportOverride = SpreadsheetFormats.WriteXlsx([new SheetValues("wrong", [new object?[] { "wrong" }])]) };
+        using var http = new HttpClient(server); var launcher = new WindowsLauncher(storage, http, new LauncherBrowser());
+        await Assert.ThrowsAsync<ConversionMismatchException>(() => launcher.OpenAsync(path)); Assert.Equal(bytes, File.ReadAllBytes(path));
+        var op = Assert.Single(w.Registry().Pending()); Assert.Equal(bytes, File.ReadAllBytes(op.Snapshot!.BackupPath));
+        await XlsReplacementSettings.SaveAsync(storage, false); await Assert.ThrowsAsync<CopyRequiredException>(() => launcher.ResumeAsync(op.Id, true));
+        await XlsReplacementSettings.SaveAsync(storage, true); server.ExportOverride = null;
+        await launcher.ResumeAsync(op.Id, true); Assert.False(File.Exists(path)); Assert.Equal(2, server.Posts);
     }
     [WindowsFact]
     public async Task CopyImportOnKnownOneDriveRootPreservesOriginalAndReusesTheMapping()

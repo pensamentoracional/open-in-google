@@ -71,10 +71,11 @@ public sealed class FormatTests
         Assert.Throws<OperationCanceledException>(() => SpreadsheetFormats.VerifyValues(payload.Expected!, payload.Bytes, stop.Token));
     }
     [Fact]
-    public void BinaryXlsIsValidatedButAlwaysPreserved()
+    public void BinaryXlsHasExpectedValuesAndKeepsItsOriginalPayload()
     {
         var bytes = Xls(); var payload = SpreadsheetFormats.Prepare("xls", bytes);
-        Assert.Equal("application/vnd.ms-excel", payload.MimeType); Assert.Null(payload.Expected); Assert.Equal(bytes, payload.Bytes);
+        Assert.Equal("application/vnd.ms-excel", payload.MimeType); Assert.NotNull(payload.Expected); Assert.Equal(bytes, payload.Bytes);
+        SpreadsheetFormats.VerifyValues(payload.Expected!, SpreadsheetFormats.WriteXlsx(payload.Expected!));
         Assert.NotEmpty(SpreadsheetFormats.ReadExcel(bytes, binary: true));
     }
     [Fact]
@@ -199,6 +200,29 @@ public sealed class FormatTests
         Assert.Throws<LauncherNotConfiguredException>(() => ExtendedConfiguration.Load(storage));
         ExtendedConfiguration.Save(storage, new(), true); ExtendedConfiguration.Save(storage, new(), true);
         Assert.Throws<InvalidOperationException>(() => ExtendedConfiguration.Save(storage, new("windows-1252"), true)); Assert.Equal(new(), ExtendedConfiguration.Load(storage));
+    }
+    [Fact]
+    public async Task XlsPreferenceDefaultsToReplaceAndCanChangeWithoutTouchingTextSettings()
+    {
+        using var w = new Workspace(); var storage = new LocalStorage(Path.Combine(w.Root, "settings"));
+        Assert.True(XlsReplacementSettings.Load(storage)); ExtendedConfiguration.Save(storage, new(), true);
+        await XlsReplacementSettings.SaveAsync(storage, false); Assert.False(XlsReplacementSettings.Load(storage));
+        Assert.Equal(new(), ExtendedConfiguration.Load(storage));
+        await XlsReplacementSettings.SaveAsync(storage, true); Assert.True(XlsReplacementSettings.Load(storage));
+        File.WriteAllText(Path.Combine(storage.Root, "xls-replacement.json"), "invalid");
+        Assert.Throws<System.Text.Json.JsonException>(() => XlsReplacementSettings.Load(storage));
+    }
+    [Fact]
+    public void ShortcutUsesStableUserIconAndKeepsLegacyBytesForRecovery()
+    {
+        using var w = new Workspace(); var storage = new LocalStorage(Path.Combine(w.Root, "settings"));
+        var icon = ShortcutIcon.Ensure(storage); Assert.Equal(icon, ShortcutIcon.Ensure(storage));
+        var url = new Uri("https://docs.google.com/spreadsheets/d/test/edit");
+        var current = InternetShortcut.Bytes(url, icon); Assert.Contains("IconFile=" + icon, Encoding.UTF8.GetString(current));
+        Assert.Contains("IconIndex=0", Encoding.UTF8.GetString(current));
+        var old = Path.Combine(w.Root, "old.url"); File.WriteAllBytes(old, InternetShortcut.Bytes(url));
+        Assert.Equal(InternetShortcut.Bytes(url), InternetShortcut.ForExisting(old, url, icon));
+        File.WriteAllBytes(icon, [1]); Assert.Throws<InvalidDataException>(() => ShortcutIcon.Ensure(storage));
     }
     [Theory]
     [InlineData("csv")]

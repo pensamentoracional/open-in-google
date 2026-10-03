@@ -46,7 +46,7 @@ internal sealed class AboutForm : Form
     {
         Text = "Sobre — ZagoSheetsWin / Zagotools"; ClientSize = new Size(810, 520); MinimumSize = new Size(600, 400); AutoScaleMode = AutoScaleMode.Dpi; StartPosition = FormStartPosition.CenterParent;
         var body = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, Padding = new Padding(18), AutoScroll = true };
-        body.Controls.Add(new Label { AutoSize = true, MaximumSize = new Size(740, 0), Text = "ZagoSheetsWin 0.9.2 — Zagotools\n\nZagoSheetsWin é uma evolução do projeto Open in Google, de Swati K (SwatiK425), desenvolvida pelo Zagotools e distribuída sob licença MIT.\n\nCopyright (c) 2026 Swati K. A autoria e a licença originais foram preservadas." });
+        body.Controls.Add(new Label { AutoSize = true, MaximumSize = new Size(740, 0), Text = "ZagoSheetsWin 0.9.3 — Zagotools\n\nZagoSheetsWin é uma evolução do projeto Open in Google, de Swati K (SwatiK425), desenvolvida pelo Zagotools e distribuída sob licença MIT.\n\nCopyright (c) 2026 Swati K. A autoria e a licença originais foram preservadas." });
         foreach (var item in new[] { ("Projeto original — Open in Google", "https://github.com/SwatiK425/open-in-google/"), ("Autora original — SwatiK425", "https://github.com/SwatiK425"), ("Código da evolução — Zagotools", "https://github.com/zagozago/ZagoSheetsWin") })
         {
             var link = new LinkLabel { Text = item.Item1, AutoSize = true, Margin = new Padding(0, 8, 0, 8) };

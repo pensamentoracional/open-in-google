@@ -19,6 +19,8 @@ Implementada na versão 0.9.2; evidências e limites em [ALPHA_1_CSV.md](ALPHA_1
 
 ## 2. XLS com substituição por padrão
 
+Implementada em 0.9.3, com ícone dos novos atalhos; ver [ALPHA_2_XLS.md](ALPHA_2_XLS.md). CI e aceite real pendentes.
+
 - Opção de substituir XLS por atalho deve vir marcada por padrão e ser acessível nas configurações. Permitir desmarcar para importar cópia.
 - Aplicar backup, conversão, conferência, publicação do atalho e retirada somente após sucesso; configurar a escolha uma vez, não a cada arquivo.
 - Explicar macros incompatíveis e possíveis diferenças de fórmulas, vínculos e formatação. Não afirmar que macros são a única diferença possível.
