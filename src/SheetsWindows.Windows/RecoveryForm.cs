@@ -8,7 +8,7 @@ internal sealed class RecoveryForm : Form
     private CancellationTokenSource? activeCancellation;
     private readonly ListBox entries = new() { Dock = DockStyle.Fill, HorizontalScrollbar = true };
     private readonly Label status = new() { Dock = DockStyle.Top, Height = 70, Padding = new Padding(12), Text = "Restaure o arquivo original inicial em um novo arquivo. A restauração funciona offline, verifica o backup e nunca sobrescreve arquivos existentes. O Sheets e o atalho permanecem disponíveis." };
-    public RecoveryForm(bool preview = false)
+    public RecoveryForm(bool preview = false, bool previewBusy = false)
     {
         Text = "Recuperar operação e backups — ZagoSheetsWin"; ClientSize = new Size(900, 470); AutoScaleMode = AutoScaleMode.Dpi; StartPosition = FormStartPosition.CenterScreen;
         var restore = new Button { Text = "Restaurar em…", Dock = DockStyle.Bottom, Height = 44 };
@@ -16,16 +16,15 @@ internal sealed class RecoveryForm : Form
         var copy = new Button { Text = "Retomar como cópia", AutoSize = true };
         var resume = new Button { Text = "Concluir substituição", AutoSize = true };
         var export = new Button { Text = "Exportar diagnóstico…", AutoSize = true };
-        var cancel = new Button { Text = "Cancelar retomada", AutoSize = true, Enabled = false };
+        var cancel = new Button { Text = "Cancelar retomada", AutoSize = true, Enabled = previewBusy, Visible = previewBusy };
         cancel.Click += (_, _) => activeCancellation?.Cancel();
-        Controls.Add(cancel); cancel.Dock = DockStyle.Bottom;
         actions.Controls.AddRange([copy, resume, export]);
-        Controls.Add(entries); Controls.Add(status); Controls.Add(actions); Controls.Add(restore);
+        Controls.Add(entries); Controls.Add(status); Controls.Add(actions); Controls.Add(restore); Controls.Add(cancel); cancel.Dock = DockStyle.Bottom;
         async Task Resume(bool replace)
         {
             if (busy || entries.SelectedItem is not RecoveryEntry entry) return;
             busy = true; actions.Enabled = false; restore.Enabled = false; entries.Enabled = false;
-            using var cancellation = new CancellationTokenSource(); activeCancellation = cancellation; cancel.Enabled = true;
+            using var cancellation = new CancellationTokenSource(); activeCancellation = cancellation; cancel.Visible = true; cancel.Enabled = true;
             var diagnostics = new DiagnosticLog(LocalStorage.ForCurrentUser());
             await diagnostics.RecordAsync(DiagnosticEvent.Started, entry.Id);
             try
@@ -38,7 +37,7 @@ internal sealed class RecoveryForm : Form
                 status.Text = replace ? "Substituição concluída. Backup privado conservado." : "Cópia aberta no Google. Original conservado.";
             }
             catch (Exception ex) when (LauncherErrors.Expected(ex)) { await diagnostics.RecordAsync(DiagnosticLog.Failure(ex), entry.Id); status.Text = LauncherErrors.Message(ex); }
-            finally { activeCancellation = null; cancel.Enabled = false; busy = false; actions.Enabled = true; restore.Enabled = true; entries.Enabled = true; }
+            finally { activeCancellation = null; cancel.Enabled = false; cancel.Visible = false; busy = false; actions.Enabled = true; restore.Enabled = true; entries.Enabled = true; }
         }
         copy.Click += async (_, _) => await Resume(false);
         resume.Click += async (_, _) => await Resume(true);

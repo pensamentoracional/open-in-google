@@ -17,8 +17,8 @@ internal static class Program
                 Branding.PreviewTheme(ApplicationTheme.Light);
                 using var home = new LauncherForm(new LauncherRequest(LauncherAction.Home)); using var homeAdvanced = new LauncherForm(new(LauncherAction.Home), expanded: true);
                 using var processingPreview = new ProcessingForm(new(LauncherAction.Open, "preview.xlsx"), preview: true); using var failurePreview = new ProcessingForm(new(LauncherAction.Open, "preview.xlsx"), preview: true, previewError: true);
-                using var setupPreview = new SetupForm(); using var advancedPreview = new SetupForm(expanded: true); using var firstUsePreview = new SetupForm(firstUse: true); using var recoveryPreview = new RecoveryForm(preview: true); using var aboutPreview = new AboutForm();
-                foreach (var entry in new[] { ("home", (Form)home), ("home-advanced", (Form)homeAdvanced), ("setup", (Form)setupPreview), ("first-use", (Form)firstUsePreview), ("setup-advanced", (Form)advancedPreview), ("recovery", (Form)recoveryPreview), ("about", (Form)aboutPreview), ("processing", (Form)processingPreview), ("processing-error", (Form)failurePreview) })
+                using var setupPreview = new SetupForm(); using var advancedPreview = new SetupForm(expanded: true); using var firstUsePreview = new SetupForm(firstUse: true); using var recoveryPreview = new RecoveryForm(preview: true); using var recoveryBusyPreview = new RecoveryForm(preview: true, previewBusy: true); using var aboutPreview = new AboutForm();
+                foreach (var entry in new[] { ("home", (Form)home), ("home-advanced", (Form)homeAdvanced), ("setup", (Form)setupPreview), ("first-use", (Form)firstUsePreview), ("setup-advanced", (Form)advancedPreview), ("recovery", (Form)recoveryPreview), ("recovery-busy", (Form)recoveryBusyPreview), ("about", (Form)aboutPreview), ("processing", (Form)processingPreview), ("processing-error", (Form)failurePreview) })
                 {
                     entry.Item2.Show(); Application.DoEvents(); entry.Item2.PerformLayout();
                     using var bitmap = new Bitmap(entry.Item2.Width, entry.Item2.Height);

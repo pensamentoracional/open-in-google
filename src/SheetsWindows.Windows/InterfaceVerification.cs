@@ -13,6 +13,16 @@ internal static class InterfaceVerification
         using var home = new LauncherForm(new(LauncherAction.Home));
         using var preview = new ProcessingForm(new(LauncherAction.Open, "preview.xlsx"), preview: true);
         home.Show(); preview.Show(); Application.DoEvents();
+        var about = Descendants(home).OfType<LinkLabel>().Single(l => l.Text == "Sobre / MIT");
+        Require(about.Width >= TextRenderer.MeasureText(about.Text, about.Font, Size.Empty, TextFormatFlags.NoPadding).Width, "MIT credit link must not be clipped.");
+        using (var recovery = new RecoveryForm(preview: true, previewBusy: true))
+        {
+            recovery.Show(); Application.DoEvents();
+            var stop = Descendants(recovery).OfType<Button>().Single(b => b.Text == "Cancelar retomada");
+            var list = Descendants(recovery).OfType<ListBox>().Single();
+            Require(stop.Visible && stop.Enabled && !stop.Bounds.IntersectsWith(list.Bounds) && stop.Bottom <= recovery.ClientSize.Height, "Recovery cancellation must remain visible outside the list.");
+            recovery.Hide();
+        }
         var light = home.BackColor;
         Branding.PreviewTheme(ApplicationTheme.Dark);
         Require(home.BackColor != light && home.BackColor == preview.BackColor, "Theme must update open forms together.");
