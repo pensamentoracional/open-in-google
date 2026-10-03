@@ -2,7 +2,7 @@
 
 Projeto em preparação: abrir planilhas locais no Google Sheets e substituir o original por um atalho de Internet na mesma pasta, com backup recuperável.
 
-**Em validação — alpha 0.9.6:** [Gestão de backups](docs/ALPHA_6_BACKUPS.md). Retenção de 30 dias, teto de 200 MB e limpeza com proteção de operações pendentes.
+**Alpha 0.9.6 aprovada:** [Gestão de backups](docs/ALPHA_6_BACKUPS.md). Retenção de 30 dias, teto de 200 MB (até 1 GB), limpeza manual e automática mediante consentimento. [Baixar instalador Windows x64](https://github.com/zagozago/ZagoSheetsWin/actions/runs/37119038565/artifacts/11273180494). CI Windows/Linux, interface e instalador aprovados; aceite manual final pendente.
 
 **Alpha 0.9.5 aprovada:** [Interface mínima, temas e processamento](docs/ALPHA_4_UI.md). [Baixar instalador Windows x64](https://github.com/zagozago/ZagoSheetsWin/actions/runs/37101501901/artifacts/11265857512). CI Windows/Linux, interface nativa, prévias e instalador aprovados; aceite manual Windows 11/Google real pendente.
 

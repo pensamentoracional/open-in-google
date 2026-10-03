@@ -1,6 +1,6 @@
 # Próxima evolução alpha — ZagoSheetsWin
 
-Decisões e prioridades alinhadas com Fernando em 03/10/2026. Este documento descreve trabalho aprovado e propostas; não declara implementação nem homologação concluídas. Pacote aprovado: 0.9.5 (etapas 1, 2, 3 e 4); CI Windows/Linux, instalador e prévias nativas aprovados. Teste Google real desta correção permanece pendente.
+Decisões e prioridades alinhadas com Fernando em 03/10/2026. Este documento descreve trabalho aprovado e propostas; não declara implementação nem homologação concluídas. Pacote aprovado: 0.9.6 (etapas 1 a 6; ícones integrados desde 0.9.3); CI Windows/Linux, instalador e prévias nativas aprovados. Teste Google real desta correção permanece pendente.
 
 ## Evidências do piloto real
 
@@ -55,7 +55,7 @@ Implementada em 0.9.5; ver [ALPHA_4_UI.md](ALPHA_4_UI.md). CI 37101501901, inter
 
 ## 6. Gestão de backups
 
-Implementação 0.9.6 em validação. Ver [ALPHA_6_BACKUPS.md](ALPHA_6_BACKUPS.md).
+Implementada em 0.9.6; CI 37119038565, interface e instalador aprovados. Aceite manual final pendente. Ver [ALPHA_6_BACKUPS.md](ALPHA_6_BACKUPS.md).
 
 - O armazenamento cresce aproximadamente com os originais únicos preservados, mais metadados; o snapshot cobre a versão inicial, não as futuras edições online.
 - Mostrar espaço ocupado, quantidade, data e ação Restaurar/Limpar. Limpeza deve distinguir backups concluídos de operações pendentes.

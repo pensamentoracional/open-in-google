@@ -1,6 +1,6 @@
 # Alpha 0.9.6 — Gestão de backups
 
-Implementação da etapa 6. Validação Windows e pacote em andamento; a versão aprovada anterior permanece 0.9.5 até os checks desta entrega terminarem.
+Implementação da etapa 6 aprovada no CI 37119038565, commit `ef04ed01c9c53d60afd19d0ecd8057e79a8fc90b`. Aceite manual final Windows 11/Google real pendente.
 
 ## Uso
 
@@ -34,3 +34,11 @@ O backup é a versão local inicial, não um histórico das alterações futuras
 Testes automatizados cobrem política, consentimento padrão, quota, concorrência, proteção de operações pendentes, interrupção, integridade, preservação de histórico e bloqueio de retomada após limpeza. O CI também verifica a interface WinForms, gera prévias light/dark e testa instalação, atualização, rejeição de downgrade, desinstalação e reinstalação preservando política e catálogo.
 
 Aceite manual Windows 11/Google real permanece para o teste final combinado, incluindo aparência dos ícones no Explorer, DPI 125/150/200% e alto contraste.
+
+## Evidências e instalador
+
+[CI 37119038565](https://github.com/zagozago/ZagoSheetsWin/actions/runs/37119038565): Windows **211 testes aprovados / 1 exclusivo Unix ignorado**, Linux **181 aprovados / 31 exclusivos Windows ignorados**, total 212, zero falhas. Build local WinForms sem erros ou warnings. Verificação nativa das regras padrão, opt-in desligado e controles completos aprovada. As quatro prévias de Backups (claro/escuro, repouso/retomada) foram revisadas; o CI gerou 17 prévias no total.
+
+Instalação por usuário, atualização, rejeição de downgrade, desinstalação e reinstalação aprovadas. Sentinelas confirmam preservação da política e do catálogo de backups, além dos backups, autorizações, preferências, histórico, atalhos, ícone e padrões do Windows. Instalação silenciosa continua sem abrir interface.
+
+[Baixar instalador alpha 0.9.6 — Windows x64](https://github.com/zagozago/ZagoSheetsWin/actions/runs/37119038565/artifacts/11273180494). ZIP contém `ZagoSheetsWin-Setup-win-x64.exe`. SHA-256 do ZIP: `4d21e81c0d419b0312ed22a01eb8e068f53f51f9d79e603815537a5e096c46b6`. Download exige login no GitHub; retenção até 01/01/2027. Pode atualizar a instalação atual preservando configuração e backups; não é necessário limpar a máquina para esta etapa.
