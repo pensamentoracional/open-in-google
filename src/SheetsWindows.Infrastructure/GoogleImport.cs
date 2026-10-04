@@ -50,6 +50,16 @@ public sealed class GoogleImport(LocalPreparation preparation, IOperationRegistr
         if (remote.Get(sheetKey) is { } pending)
         {
             if (pending.AccountId != access.AccountId || pending.Hash != snapshot.Sha256) throw new LocalConflictException("Upload binding changed.");
+            // Existing sessions must finish with the exact payload used by their originating version.
+            if (pending.FileId is null && op.Format == "xls")
+            {
+                try { _ = drive.CanResume(pending, payload.Bytes, payload.MimeType); }
+                catch (LocalConflictException)
+                {
+                    if (!drive.CanResume(pending, bytes, "application/vnd.ms-excel")) throw;
+                    payload = new(bytes, "application/vnd.ms-excel", SpreadsheetFormats.ReadExcel(bytes, binary: true, ct: ct));
+                }
+            }
             if (pending.FileId is null && drive.CanResume(pending, payload.Bytes, payload.MimeType))
             {
                 try { remote.Candidate(sheetKey, await drive.ResumeAsync(pending, payload.Bytes, payload.MimeType, ct)); }

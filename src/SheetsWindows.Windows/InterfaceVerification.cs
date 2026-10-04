@@ -19,7 +19,7 @@ internal static class InterfaceVerification
         using var home = new LauncherForm(new(LauncherAction.Home));
         using var preview = new ProcessingForm(new(LauncherAction.Open, "preview.xlsx"), preview: true);
         home.Show(); preview.Show(); Application.DoEvents();
-        var about = Descendants(home).OfType<LinkLabel>().Single(l => l.Text == "Sobre / MIT");
+        var about = Descendants(home).OfType<LinkLabel>().Single(l => l.Text == "Sobre / Licenças");
         Require(about.Width >= TextRenderer.MeasureText(about.Text, about.Font, Size.Empty, TextFormatFlags.NoPadding).Width, "MIT credit link must not be clipped.");
         using (var recovery = new RecoveryForm(preview: true, previewBusy: true))
         {

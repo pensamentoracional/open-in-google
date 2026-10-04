@@ -114,6 +114,44 @@ public sealed class GoogleTests
         public void Open(Uri uri) { if (Fail) throw new IOException("Browser unavailable"); Opened.Add(uri); }
     }
     [Fact]
+    public async Task XlsUploadsConvertedXlsxRetainsBinaryBackupAndReusesRemote()
+    {
+        using var w = new Workspace(); var path = Path.ChangeExtension(w.Source, ".xls");
+        var bytes = FormatTests.Xls(); File.WriteAllBytes(path, bytes); using var server = new DriveServer();
+        var importer = Importer(w, server); var receipt = await importer.ImportReceiptAsync(path);
+        Assert.Equal(SpreadsheetFormats.XlsxMime, Assert.Single(server.MediaTypes));
+        var upload = Assert.Single(server.Uploaded).Value;
+        SpreadsheetFormats.VerifyValues(SpreadsheetFormats.ReadExcel(bytes, binary: true), upload);
+        Assert.Equal(bytes, File.ReadAllBytes(receipt.Operation.Snapshot!.BackupPath));
+        Assert.Equal(bytes, File.ReadAllBytes(path)); Assert.True(receipt.CanReplace);
+        Assert.Equal(receipt.Url, await importer.ImportAsync(path)); Assert.Equal(2, server.Posts);
+    }
+    private sealed class PlainUploadProtector : IUploadSecretProtector
+    {
+        public byte[] Protect(byte[] bytes) => bytes;
+        public byte[] Unprotect(byte[] bytes) => bytes;
+    }
+    [Fact]
+    public async Task PreviousVersionXlsSessionResumesOriginalPayloadWithoutNewUpload()
+    {
+        using var w = new Workspace(); var path = Path.ChangeExtension(w.Source, ".xls");
+        var bytes = FormatTests.Xls(); File.WriteAllBytes(path, bytes); var auth = new FixedAuth();
+        var op = await w.Coordinator().PrepareAsync("A", path);
+        var remote = new GoogleRemoteRegistry(Path.Combine(w.Root, "state", "google.db"));
+        var attempt = remote.Begin("sheet:" + op.Id.ToString("N"), "A", "sheet", op.Snapshot!.Sha256);
+        using var server = new DriveServer { LoseSheetResponse = true, DisconnectOnLoss = true };
+        using var http = new HttpClient(server, false);
+        var sessions = new UploadSessionStore(Path.Combine(w.Root, "state", "uploads"), new PlainUploadProtector());
+        var drive = new GoogleDriveClient(http, auth, sessions);
+        await Assert.ThrowsAsync<HttpRequestException>(() => drive.CreateAsync(attempt, "Legacy", null, bytes, default, "application/vnd.ms-excel"));
+        server.Offline = false;
+        var importer = new GoogleImport(w.Coordinator(), w.Registry(), remote, new SourceReader(), new FileOperationLock(w.Locks), auth, drive);
+        var receipt = await importer.ImportReceiptAsync(path);
+        Assert.Equal(GoogleDriveClient.Editor("file_1"), receipt.Url); Assert.Equal(1, server.Posts);
+        Assert.Equal("application/vnd.ms-excel", Assert.Single(server.MediaTypes));
+        Assert.Equal(bytes, Assert.Single(server.Uploaded).Value);
+    }
+    [Fact]
     public async Task BackupCleanupNeverDeletesCurrentImportOrDuplicatesRemovedOperation()
     {
         using var w = new Workspace(); File.WriteAllBytes(w.Source, Workbook()); using var server = new DriveServer();
@@ -211,7 +249,7 @@ public sealed class GoogleTests
         using var w = new Workspace(); var path = Path.ChangeExtension(w.Source, ".xls"); var bytes = FormatTests.Xls(); File.WriteAllBytes(path, bytes); ConfigureLauncher(w, out var storage);
         using var server = new DriveServer(); using var http = new HttpClient(server); var telemetry = new ProcessingTelemetry(); var launcher = new WindowsLauncher(storage, http, new LauncherBrowser(), telemetry);
         var shortcut = await launcher.OpenAsync(path); Assert.NotNull(telemetry.Capture().ConversionMs); Assert.NotNull(telemetry.Capture().UploadMs); Assert.NotNull(telemetry.Capture().VerificationMs);
-        Assert.True(File.Exists(shortcut)); Assert.False(File.Exists(path)); Assert.Contains("IconFile=" + Path.Combine(storage.Root, "shortcut-icon-v1.ico"), File.ReadAllText(shortcut)); Assert.Equal("application/vnd.ms-excel", Assert.Single(server.MediaTypes));
+        Assert.True(File.Exists(shortcut)); Assert.False(File.Exists(path)); Assert.Contains("IconFile=" + Path.Combine(storage.Root, "shortcut-icon-v1.ico"), File.ReadAllText(shortcut)); Assert.Equal(SpreadsheetFormats.XlsxMime, Assert.Single(server.MediaTypes));
         Assert.Equal(bytes, File.ReadAllBytes(Assert.Single(w.Registry().Pending()).Snapshot!.BackupPath)); Assert.Equal(1, server.Exports);
         var second = Path.Combine(w.Root, "copia.xls"); File.WriteAllBytes(second, bytes);
         await XlsReplacementSettings.SaveAsync(storage, false);

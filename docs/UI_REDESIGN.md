@@ -28,3 +28,7 @@ Compilação e testes devem passar antes do aceite. O pipeline Windows executa v
 - Diagnóstico: categorias de falha sem mensagens de exceção, caminhos, contas ou conteúdo.
 - Arquivos reais enviados pelo usuário: leitura/preparação local de XLS e XLSX aprovada. Arquivos e dados privados não incluídos no repositório.
 - Testes sintéticos cobrem Default, precedência de Override, duplicidade, categorias do diagnóstico e reutilização do upload XLS com fórmulas. Validação integrada Google/Windows pendente.
+
+## 0.9.13 — XLS local e licenças
+
+Novas importações XLS enviam XLSX convertido com NPOI 2.7.6, preservando o backup binário e a verificação com ExcelDataReader. O link passa a Sobre / Licenças; as licenças próprias das dependências são incluídas. Detalhes e limites em XLS_CONVERSION.md.

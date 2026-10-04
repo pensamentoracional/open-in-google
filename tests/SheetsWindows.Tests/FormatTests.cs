@@ -96,10 +96,12 @@ public sealed class FormatTests
         Assert.Throws<OperationCanceledException>(() => SpreadsheetFormats.VerifyValues(payload.Expected!, payload.Bytes, stop.Token));
     }
     [Fact]
-    public void BinaryXlsHasExpectedValuesAndKeepsItsOriginalPayload()
+    public void BinaryXlsConvertsToXlsxAndKeepsExpectedValues()
     {
         var bytes = Xls(); var payload = SpreadsheetFormats.Prepare("xls", bytes);
-        Assert.Equal("application/vnd.ms-excel", payload.MimeType); Assert.NotNull(payload.Expected); Assert.Equal(bytes, payload.Bytes);
+        Assert.Equal(SpreadsheetFormats.XlsxMime, payload.MimeType); Assert.NotNull(payload.Expected); Assert.NotEqual(bytes, payload.Bytes);
+        SpreadsheetFormats.VerifyValues(payload.Expected!, payload.Bytes);
+        Assert.Equal(payload.Bytes, SpreadsheetFormats.Prepare("xls", bytes).Bytes);
         SpreadsheetFormats.VerifyValues(payload.Expected!, SpreadsheetFormats.WriteXlsx(payload.Expected!));
         Assert.NotEmpty(SpreadsheetFormats.ReadExcel(bytes, binary: true));
     }

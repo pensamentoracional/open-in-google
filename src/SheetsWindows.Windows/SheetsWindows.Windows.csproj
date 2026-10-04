@@ -5,11 +5,11 @@
     <UseWindowsForms>true</UseWindowsForms>
     <OutputType>WinExe</OutputType>
     <AssemblyName>SheetsWindows</AssemblyName>
-    <Product>ZagoSheetsWin</Product><Title>ZagoSheetsWin</Title><Company>Zagotools</Company><Version>0.9.12</Version>
+    <Product>ZagoSheetsWin</Product><Title>ZagoSheetsWin</Title><Company>Zagotools</Company><Version>0.9.13</Version>
     <ApplicationIcon>../../branding/zagosheetswin.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup><None Include="../../LICENSE" Link="LICENSE" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"/></ItemGroup>
   <ItemGroup><ProjectReference Include="../SheetsWindows.Infrastructure/SheetsWindows.Infrastructure.csproj"/></ItemGroup>
-<ItemGroup><None Include="../../third-party/ExcelDataReader-LICENSE.txt" Link="third-party/ExcelDataReader-LICENSE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"/></ItemGroup><ItemGroup><EmbeddedResource Include="../../branding/zonly.png" LogicalName="Brand.z.png"/><EmbeddedResource Include="../../branding/zfull.png" LogicalName="Brand.logo.png"/><EmbeddedResource Include="../../branding/zagosheetswin.ico" LogicalName="Brand.icon.ico"/></ItemGroup>
+<ItemGroup><None Include="../../third-party/**/*" Link="third-party/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"/></ItemGroup><ItemGroup><EmbeddedResource Include="../../branding/zonly.png" LogicalName="Brand.z.png"/><EmbeddedResource Include="../../branding/zfull.png" LogicalName="Brand.logo.png"/><EmbeddedResource Include="../../branding/zagosheetswin.ico" LogicalName="Brand.icon.ico"/></ItemGroup>
 <ItemGroup><None Include="../../ATTRIBUTION.md" Link="ATTRIBUTION.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"/></ItemGroup><ItemGroup><None Include="../../branding/sheet-shortcut.ico" Link="sheet-shortcut.ico" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"/></ItemGroup></Project>

@@ -42,9 +42,10 @@ public static class SpreadsheetFormats
                 var expected = ReadOds(bytes);
                 return new(bytes, "application/vnd.oasis.opendocument.spreadsheet", expected);
             case "xls":
-                // Compare cached cell values; the full binary backup preserves legacy resources.
+                // Validate independently with ExcelDataReader before converting the upload payload.
                 var legacy = ReadExcel(bytes, binary: true, ct: ct);
-                return new(bytes, "application/vnd.ms-excel", legacy);
+                var converted = LegacyWorkbookConverter.Convert(bytes, ct, out var copyOnly);
+                return new(converted, XlsxMime, copyOnly ? null : legacy);
             default: throw new NotSupportedException("Unsupported spreadsheet format.");
         }
     }

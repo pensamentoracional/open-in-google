@@ -55,3 +55,7 @@ Usar a branch `feature/robustness`, versão 0.8. [Baixar instalador 0.8 aprovado
 ### ZagoSheetsWin — etapa 9
 
 Versão 0.9.1 na branch `feature/zagosheetswin`. [Baixar instalador aprovado](https://github.com/zagozago/ZagoSheetsWin/actions/runs/36926691912/artifacts/11193993461). CI Windows/Linux aprovado, incluindo instalação/atualização/remoção e revisão visual das quatro telas. Logos e créditos incorporados ao instalador e às telas; Sobre / MIT identifica Open in Google e Swati K (SwatiK425). O nome novo preserva a instalação/estado anteriores por compatibilidade. [Pacote e roteiro final](docs/STAGE_9.md). A licença MIT original permanece íntegra.
+
+### XLS local (0.9.13)
+
+Arquivos XLS são convertidos localmente em XLSX com NPOI 2.7.6 antes da importação. O backup conserva o XLS original; ExcelDataReader continua responsável pela leitura e conferência. Fórmulas não verificáveis e recursos complexos preservam o original. Consulte [limitações da conversão](docs/XLS_CONVERSION.md) e [licenças das dependências](third-party/NOTICE.md).
